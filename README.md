@@ -115,6 +115,7 @@ print(recommender.recommend(users=["u1"], k=2).data)
 
 详细参数、时间预算、切分方式、大数据输出和完整配置见 [使用指南](docs/usage.md)。
 仍需完成的工程与实验验证见 [能力审计](docs/AUDIT.md)。
+版本变更见 [CHANGELOG](CHANGELOG.md)。
 
 ## 开发与测试
 
