@@ -138,7 +138,7 @@ python benchmarks/benchmark.py --input data/interactions.parquet --seeds 7,8,9
 
 ```bash
 uv run python benchmarks/benchmark_retrieval.py --items 100000 --users 1000 \
-  --backend flat,hnsw,ivf,ivfpq
+  --backend flat,hnsw,ivf,ivfpq --seeds 0,1,2
 ```
 
 输出 JSON 包含每个 seed 的数据规模、模型 leaderboard、吞吐、峰值 RSS、Python 和平台信息，

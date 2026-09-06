@@ -106,27 +106,38 @@ def main() -> None:
     parser.add_argument("--items", type=int, default=20_000)
     parser.add_argument("--users", type=int, default=1_000)
     parser.add_argument("--dimensions", type=int, default=64)
-    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument(
+        "--seeds", default="0", help="Comma-separated random seeds for repeated runs."
+    )
     parser.add_argument("--backend", default="flat,hnsw,ivf,ivfpq")
     args = parser.parse_args()
     if min(args.items, args.users, args.dimensions) <= 0:
         raise ValueError("items, users, and dimensions must be positive")
     backends = [value.strip() for value in args.backend.split(",") if value.strip()]
+    try:
+        seeds = [int(value.strip()) for value in args.seeds.split(",") if value.strip()]
+    except ValueError as exc:
+        raise ValueError("seeds must be a comma-separated list of integers") from exc
+    if not seeds:
+        raise ValueError("seeds must contain at least one integer")
     allowed = {"flat", "hnsw", "ivf", "ivfpq"}
     unknown = sorted(set(backends) - allowed)
     if not backends or unknown:
         raise ValueError(f"backend must contain only {sorted(allowed)}")
-    print(
-        json.dumps(
-            {
-                "runs": [
-                    run_once(args.items, args.users, args.dimensions, args.seed, backend)
-                    for backend in backends
-                ]
-            },
-            indent=2,
-        )
-    )
+    runs = [
+        run_once(args.items, args.users, args.dimensions, seed, backend)
+        for seed in seeds
+        for backend in backends
+    ]
+    aggregate: dict[str, dict[str, float]] = {}
+    for backend in backends:
+        backend_runs = [run for run in runs if run["backend"] == backend]
+        metrics = ("fit_seconds", "recommend_seconds", "users_per_second", "recall_at_20_vs_exact")
+        for key in metrics:
+            values = np.asarray([float(run[key]) for run in backend_runs])
+            aggregate.setdefault(backend, {})[f"{key}_mean"] = round(float(values.mean()), 4)
+            aggregate[backend][f"{key}_std"] = round(float(values.std()), 4)
+    print(json.dumps({"runs": runs, "aggregate": aggregate}, indent=2))
 
 
 if __name__ == "__main__":
