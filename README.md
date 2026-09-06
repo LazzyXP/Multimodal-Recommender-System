@@ -212,6 +212,8 @@ recommender.fit(
   任意自定义模型的硬中断仍由模型工厂自行负责。
 - `num_workers`：用线程池并行训练非 torch 模型；torch 图模型始终串行训练，避免在 CPU/CUDA/MPS
   上并发导致的内存超限与稳定性问题（会发出 warning）。
+- 图模型使用 `device="auto"` 时遇到 CUDA out-of-memory 会清理显存并重试 CPU；显式
+  `device="cuda"` 不会静默降级，失败会保留在 fit summary 中。
 - `split`：`temporal`（按时间 leave-one-out，默认）、`random`（随机 leave-one-out）、
   `cold_start`（随机保留一部分用户整体作为冷启动测试集）。
 - `presets` 现在真正影响训练强度：`fast_training < medium_quality < best_quality` 逐级提高

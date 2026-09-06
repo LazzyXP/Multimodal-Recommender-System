@@ -754,7 +754,35 @@ class MultiModalRecommender:
                 full_item_counts, interactions, dataset
             )
             return model
-        model.fit(interactions, dataset)
+        try:
+            model.fit(interactions, dataset)
+        except RuntimeError as exc:
+            # ``auto`` is allowed to degrade to CPU when a graph model exceeds
+            # available GPU memory. An explicit CUDA request remains strict so
+            # deployment errors are never hidden.
+            is_oom = "out of memory" in str(exc).lower()
+            requested_device = str(config.get("device", "auto")).lower()
+            if (
+                not is_oom
+                or not self.registry.requires_torch(model_name)
+                or requested_device != "auto"
+            ):
+                raise
+            warnings.warn(
+                f"{model_name} ran out of GPU memory; retrying on CPU because device='auto'.",
+                stacklevel=2,
+            )
+            try:
+                import torch
+
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+            except (ImportError, RuntimeError):
+                pass
+            fallback_config = {**config, "device": "cpu"}
+            model = self.registry.create(model_name, self.columns, **fallback_config)
+            model.max_score_bytes = self.max_inference_score_mb * 1024 * 1024
+            model.fit(interactions, dataset)
         if use_full_counts and full_item_counts is not None and model_name == "ItemCF":
             maximum = max(full_item_counts.values(), default=1)
             model.items = list(full_item_counts)
@@ -840,6 +868,7 @@ class MultiModalRecommender:
                 "training_scope": ("train" if not self.is_streaming else "sampled"),
                 "error": None,
                 "chosen_config": chosen_config,
+                "actual_device": getattr(final_model, "device_name", None),
                 "refit_status": "not_requested",
                 "early_stopped": bool(getattr(final_model, "early_stopped", False)),
                 **self._model_statistics(final_model),
@@ -857,6 +886,7 @@ class MultiModalRecommender:
                 "training_scope": "failed",
                 "error": f"{type(exc).__name__}: {exc}",
                 "early_stopped": False,
+                "actual_device": None,
                 "num_params": 0,
                 "size_bytes": 0,
             }
@@ -984,6 +1014,7 @@ class MultiModalRecommender:
             "training_scope": "skipped",
             "error": "time budget exhausted",
             "early_stopped": False,
+            "actual_device": None,
             "num_params": 0,
             "size_bytes": 0,
         }
