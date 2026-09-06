@@ -1,0 +1,6 @@
+# Project-wide package index. Override with --index-url/--default-index when
+# deploying in an environment that uses a different mirror or private registry.
+[[index]]
+name = "aliyun"
+url = "https://mirrors.aliyun.com/pypi/simple"
+default = true

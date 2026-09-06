@@ -1,0 +1,18 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+dist/
+build/
+artifacts/
+.mmrec/
+.uv-cache/
+
+# Local secrets and operating-system metadata
+.env
+.env.*
+!.env.example
+.DS_Store

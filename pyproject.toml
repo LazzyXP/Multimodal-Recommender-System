@@ -1,0 +1,55 @@
+[project]
+name = "multimodal-recommender"
+version = "0.1.0"
+description = "AutoML-style multimodal recommendation toolkit"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{ name = "Multimodal Recommender contributors" }]
+keywords = ["recommender-system", "multimodal", "automl", "ranking", "retrieval"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "numpy>=1.26",
+    "pandas>=2.1",
+    "pyarrow>=14",
+]
+
+[project.optional-dependencies]
+torch = ["torch>=2.2"]
+faiss = ["faiss-cpu>=1.8"]
+all = ["torch>=2.2", "faiss-cpu>=1.8"]
+
+[project.scripts]
+mmrec = "mmrec.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.9",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mmrec"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
