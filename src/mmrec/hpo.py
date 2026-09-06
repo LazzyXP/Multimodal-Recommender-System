@@ -28,6 +28,11 @@ class TpeSearch:
         warmup: int = 3,
         candidates: int = 24,
     ) -> None:
+        if not space:
+            raise ValueError("HPO search space must contain at least one parameter.")
+        empty = [parameter for parameter, choices in space.items() if not choices]
+        if empty:
+            raise ValueError(f"HPO choices cannot be empty: {empty}")
         self.space = space
         self.gamma = gamma
         self.warmup = warmup

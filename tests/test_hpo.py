@@ -1,6 +1,15 @@
 from __future__ import annotations
 
+import pytest
+
 from mmrec.hpo import TpeSearch
+
+
+def test_tpe_rejects_empty_search_space() -> None:
+    with pytest.raises(ValueError, match="at least one parameter"):
+        TpeSearch({})
+    with pytest.raises(ValueError, match="choices cannot be empty"):
+        TpeSearch({"lr": []})
 
 
 def test_tpe_warmup_returns_random_configs() -> None:
