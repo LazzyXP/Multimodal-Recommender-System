@@ -12,7 +12,7 @@
 
 | 优先级 | 当前证据 | 后续验收要求 |
 |---|---|---|
-| 中 | `predictor.save()` 仍分别替换 pickle 和 metadata | 已保留上一代完整 artifact，并在当前代不一致时自动回退；目录级原子提交和并发锁仍未实现 |
+| 中 | `predictor.save()` 仍分别替换 pickle 和 metadata | 已保留上一代完整 artifact、异常回退和目录写锁；目录级原子提交仍未实现 |
 | 已完成 | CI 显式导入 torch 后运行图模型测试 | CPU smoke 会打印 torch 版本/CUDA 状态，缺 torch 时在测试前失败 |
 | 已完成 | benchmark 支持真实数据和多随机种子 | JSON 记录 Recall/NDCG、耗时、峰值 RSS、平台和每次运行的均值/标准差 |
 | 中 | `MultiModalItemKNN` 使用 `IndexFlatIP`，并保留完整特征与评分数组 | 校验候选截断、已见物品过滤和批量/单用户结果一致性，再评估 HNSW/IVF |
