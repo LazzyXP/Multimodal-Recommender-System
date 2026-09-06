@@ -1,8 +1,7 @@
-# First PyPI release
+# PyPI release
 
-Status: source installation is available; the project has not yet been published to PyPI.
-Do not advertise package-name installation until the final verification below succeeds.
-A 404 response for the project does not guarantee that PyPI will accept the name.
+The project `multimodal-recommender` has a published `0.1.0` release. New releases must use a
+new version number; PyPI does not allow replacing files from an existing release.
 
 ## One-time account setup
 
@@ -26,28 +25,28 @@ Official instructions: https://docs.pypi.org/trusted-publishers/creating-a-proje
 
 ## Build, verify, then publish
 
-1. Confirm `pyproject.toml` has the intended version (currently `0.1.0`).
+1. Confirm `pyproject.toml` has the intended new version (currently the development version is `0.1.1`).
 2. Wait for CI and **Package and publish** to pass on the exact commit being released.
    The packaging workflow builds both distributions, validates metadata with Twine, installs the
    source distribution, and tests the wheel on Linux/macOS/Windows with Python 3.11 and 3.12.
    The installed-package smoke test runs outside the checkout and exercises training, recommendation,
    save/load and the CLI. Optional torch models have their own existing CI job.
-3. Create a GitHub Release with tag `v0.1.0` targeting that tested commit.
+3. Create a GitHub Release with a matching tag, for example `v0.1.1`, targeting that tested commit.
    A plain push or manual workflow run only builds/tests; publishing requires a published Release.
 4. The workflow verifies the tag against package metadata and uploads the tested artifacts to PyPI.
    Review the `publish` job result; a successful GitHub Release alone is not evidence of a PyPI upload.
-5. Verify https://pypi.org/project/multimodal-recommender/0.1.0/ exists, then use a fresh environment:
+5. Verify the matching PyPI version exists, then use a fresh environment:
 
    ```bash
    python -m venv /tmp/mmrec-pypi-check
-   /tmp/mmrec-pypi-check/bin/python -m pip install --index-url https://pypi.org/simple multimodal-recommender==0.1.0
+   /tmp/mmrec-pypi-check/bin/python -m pip install --index-url https://pypi.org/simple multimodal-recommender==0.1.1
    /tmp/mmrec-pypi-check/bin/python scripts/package_smoke.py
    /tmp/mmrec-pypi-check/bin/mmrec --help
    ```
 
-   The commands above are the **post-publication acceptance check**, not currently available installation instructions.
+   The commands above are the **post-publication acceptance check**.
    On Windows use the virtual environment's `Scripts/python.exe` and `Scripts/mmrec.exe`.
-6. Only after that succeeds, update the README's release status and advertise PyPI installation.
+6. Update the README's pinned installation version after the upload succeeds.
 
 PyPI does not allow replacing an already uploaded version's files. Fixes after a successful upload
 require a new version and matching tag. If only some files uploaded, inspect PyPI before retrying.

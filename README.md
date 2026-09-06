@@ -30,9 +30,14 @@
 
 ## 安装
 
-**发布状态：尚未发布到 PyPI。** 当前不能使用 `pip install multimodal-recommender`
-从 PyPI 安装；此前文档把计划中的发布方式写成已可用，这是错误的。
-目前需要 Python 3.11+ 和 Git，可直接从 GitHub 安装：
+**PyPI 目前提供 0.1.0。** 当前源码 `main` 已进入 0.1.1 开发版本；需要稳定复现时请固定
+已发布版本：
+
+```bash
+python -m pip install "multimodal-recommender==0.1.0"
+```
+
+也可以从 GitHub 安装最新源码（需要 Python 3.11+ 和 Git）：
 
 ```bash
 python -m pip install "git+https://github.com/LazzyXP/Multimodal-Recommender-System.git@main"
@@ -51,8 +56,8 @@ python -m pip install .
 uv sync --group dev
 ```
 
-首次 PyPI 发布还需要维护者配置账号和 Trusted Publisher，具体步骤见
-[发布说明](docs/releasing.md)。GitHub Release 或构建产物不等于已经发布到 PyPI。
+新版本发布需要维护者配置 Trusted Publisher，具体步骤见
+[发布说明](docs/releasing.md)。每个已上传的版本不可覆盖，修复需要递增版本号。
 
 The core wheel has no platform-specific native dependency beyond NumPy, pandas and
 PyArrow. The optional graph layer uses the official PyTorch wheel for the current
