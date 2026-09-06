@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 
 from mmrec.data import DatasetBundle
-from mmrec.features import encode_item_features
+from mmrec.features import align_item_feature_matrix, encode_item_features
 from mmrec.models.base import BaseRecommendationModel
 
 
@@ -61,15 +61,7 @@ class VBPRModel(BaseRecommendationModel):
             item_col,
             modalities,
         )
-        feature_by_item = {
-            item_id: feature_matrix[index] for index, item_id in enumerate(feature_item_ids)
-        }
-        self.item_features = np.stack(
-            [
-                feature_by_item.get(item_id, np.zeros(feature_matrix.shape[1]))
-                for item_id in self.items
-            ]
-        ).astype(np.float32)
+        self.item_features = align_item_feature_matrix(self.items, feature_item_ids, feature_matrix)
         self.user_ids = interactions[user_col].drop_duplicates().tolist()
         self.user_indices = {user_id: index for index, user_id in enumerate(self.user_ids)}
         self.item_indices = {item_id: index for index, item_id in enumerate(self.items)}

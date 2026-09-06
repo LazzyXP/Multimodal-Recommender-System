@@ -84,7 +84,7 @@ def _encode_text(frame: pd.DataFrame, dimensions: int) -> np.ndarray:
 
 
 def _encode_embedding_column(series: pd.Series, column: str) -> np.ndarray:
-    vectors: list[np.ndarray] = []
+    vectors: list[np.ndarray | None] = []
     expected_size: int | None = None
     for value in series:
         if isinstance(value, str):
@@ -92,15 +92,37 @@ def _encode_embedding_column(series: pd.Series, column: str) -> np.ndarray:
                 f"{column!r} contains paths or strings. The MVP expects precomputed numeric "
                 "embeddings for image/embedding modalities."
             )
+        if value is None or (np.isscalar(value) and pd.isna(value)):
+            vectors.append(None)
+            continue
         vector = np.asarray(value, dtype=float).reshape(-1)
         if expected_size is None:
             expected_size = vector.size
         if vector.size != expected_size:
             raise ValueError(f"{column!r} embeddings must all have the same dimension.")
         vectors.append(vector)
-    if not vectors or expected_size == 0:
+    if not vectors or expected_size in (None, 0):
         raise ValueError(f"{column!r} must contain non-empty numeric embeddings.")
-    return _row_normalize(np.stack(vectors))
+    filled = np.zeros((len(vectors), expected_size), dtype=np.float32)
+    for row_index, vector in enumerate(vectors):
+        if vector is not None:
+            filled[row_index] = vector
+    return _row_normalize(filled)
+
+
+def align_item_feature_matrix(
+    item_ids: list[Any], feature_item_ids: list[Any], feature_matrix: np.ndarray
+) -> np.ndarray:
+    """Align an encoded feature matrix to the model catalog in one allocation."""
+    if feature_matrix.ndim != 2:
+        raise ValueError("feature_matrix must be two-dimensional.")
+    positions = {item_id: index for index, item_id in enumerate(feature_item_ids)}
+    aligned = np.zeros((len(item_ids), feature_matrix.shape[1]), dtype=np.float32)
+    for row_index, item_id in enumerate(item_ids):
+        source_index = positions.get(item_id)
+        if source_index is not None:
+            aligned[row_index] = feature_matrix[source_index]
+    return aligned
 
 
 def _row_normalize(matrix: np.ndarray) -> np.ndarray:

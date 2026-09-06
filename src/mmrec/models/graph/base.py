@@ -18,7 +18,7 @@ import pandas as pd
 import torch
 
 from mmrec.data import DatasetBundle
-from mmrec.features import encode_item_feature_blocks
+from mmrec.features import align_item_feature_matrix, encode_item_feature_blocks
 from mmrec.models.base import BaseRecommendationModel
 from mmrec.models.graph import common
 
@@ -270,10 +270,7 @@ class GraphModelBase(BaseRecommendationModel):
             )
             item_ids_ordered = dataset.items[self.columns.item_id].tolist()
             for name, matrix in blocks.items():
-                by_item = {item_id: matrix[i] for i, item_id in enumerate(item_ids_ordered)}
-                stacked = np.stack(
-                    [by_item.get(item_id, np.zeros(matrix.shape[1])) for item_id in self.items]
-                ).astype(np.float32)
+                stacked = align_item_feature_matrix(self.items, item_ids_ordered, matrix)
                 self._feature_blocks[name] = torch.as_tensor(stacked)
 
     def _resolve_device(self) -> torch.device:
