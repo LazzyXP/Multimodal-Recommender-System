@@ -176,6 +176,16 @@ def test_cooccurrence_topk_excludes_self_with_duplicate_edges() -> None:
     assert (src != dst).all()
 
 
+def test_cooccurrence_graph_caps_pair_buffer() -> None:
+    left = torch.arange(100, dtype=torch.long).repeat_interleave(4)
+    right = torch.arange(100, dtype=torch.long).repeat(4)
+    src, dst = common.cooccurrence_topk(
+        left, right, num_left=100, num_right=100, k=10, max_pairs=20
+    )
+    assert src.numel() == dst.numel()
+    assert src.numel() <= 20
+
+
 def test_negative_sampler_resolves_collisions_and_rejects_full_catalog() -> None:
     edges_users = torch.tensor([0, 0], dtype=torch.long)
     edges_items = torch.tensor([0, 1], dtype=torch.long)

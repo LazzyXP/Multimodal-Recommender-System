@@ -213,6 +213,7 @@ def cooccurrence_topk(
     num_right: int,
     k: int,
     degree_cap: int = 500,
+    max_pairs: int = 5_000_000,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """Build a top-``k`` co-occurrence graph on the ``left`` side of a bipartite
     edge list.
@@ -242,6 +243,15 @@ def cooccurrence_topk(
     offsets = np.concatenate((np.zeros(1, dtype=np.int64), np.cumsum(counts)[:-1]))
 
     active = np.flatnonzero((counts >= 2) & (counts <= degree_cap))
+    # A collection of many medium-degree nodes can still produce an enormous
+    # pair buffer. Process the rarest right-nodes first and cap the total
+    # candidate pairs before allocating the NumPy buffers. This keeps graph
+    # construction bounded while retaining the strongest co-occurrence signal.
+    if active.size:
+        active = active[np.argsort(counts[active], kind="stable")]
+        cumulative = np.cumsum(counts[active] * (counts[active] - 1))
+        keep = int(np.searchsorted(cumulative, max_pairs, side="right"))
+        active = active[: max(1, keep)]
     sizes = counts[active]
     total = int(np.sum(sizes * (sizes - 1)))
     if total == 0:
