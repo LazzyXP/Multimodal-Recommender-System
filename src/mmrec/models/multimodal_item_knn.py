@@ -23,6 +23,8 @@ class MultiModalItemKNNModel(BaseRecommendationModel):
 
     def __init__(self, columns, use_ann: bool = False, ann_topk: int = 100) -> None:
         super().__init__(columns)
+        if ann_topk <= 0:
+            raise ValueError("ann_topk must be positive.")
         self.use_ann = use_ann
         self.ann_topk = ann_topk
         self._ann_index: Any = None

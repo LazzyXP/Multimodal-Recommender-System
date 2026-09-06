@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import pandas as pd
+import pytest
 
 from mmrec import MultiModalRecommender
-from mmrec.models import torch_available
+from mmrec.config import ColumnConfig
+from mmrec.models import MultiModalItemKNNModel, torch_available
 
 
 def _data() -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -45,6 +47,11 @@ def _data() -> tuple[pd.DataFrame, pd.DataFrame]:
         }
     )
     return interactions, items
+
+
+def test_multimodal_ann_topk_must_be_positive() -> None:
+    with pytest.raises(ValueError, match="ann_topk must be positive"):
+        MultiModalItemKNNModel(ColumnConfig(), use_ann=True, ann_topk=0)
 
 
 def test_model_catalog_exposes_families_and_references() -> None:
