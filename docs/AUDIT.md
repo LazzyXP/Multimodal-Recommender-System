@@ -12,9 +12,9 @@
 
 | 优先级 | 当前证据 | 后续验收要求 |
 |---|---|---|
-| 高 | `predictor.save()` 先替换 pickle，再计算并替换 metadata | 注入元数据写入失败、进程中断和并发读写；保证读者只能读取同一代完整文件，失败后旧模型仍可加载 |
-| 高 | `ci.yml` 单独安装未限定版本的 torch，随后用 `uv run` 执行；测试模块使用 `importorskip` | 在支持版本的独立 CPU 环境中确认 torch 实际存在，并要求图模型测试真实执行而非跳过 |
-| 高 | 缺少统一真实数据、固定切分和多随机种子的模型对照结果 | 内部 benchmark 记录 Recall/NDCG、耗时、峰值内存/显存、失败模型与环境；先对照交互基线 |
+| 中 | `predictor.save()` 仍分别替换 pickle 和 metadata | 已保留上一代完整 artifact，并在当前代不一致时自动回退；目录级原子提交和并发锁仍未实现 |
+| 已完成 | CI 显式导入 torch 后运行图模型测试 | CPU smoke 会打印 torch 版本/CUDA 状态，缺 torch 时在测试前失败 |
+| 已完成 | benchmark 支持真实数据和多随机种子 | JSON 记录 Recall/NDCG、耗时、峰值 RSS、平台和每次运行的均值/标准差 |
 | 中 | `MultiModalItemKNN` 使用 `IndexFlatIP`，并保留完整特征与评分数组 | 校验候选截断、已见物品过滤和批量/单用户结果一致性，再评估 HNSW/IVF |
 
 下文的“FAISS ANN”是历史表述，当前实现为精确索引；不同模型的 embedding 不同，也不能单独证明论文实现正确。
