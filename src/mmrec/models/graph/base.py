@@ -280,7 +280,13 @@ class GraphModelBase(BaseRecommendationModel):
         requested = self.device_name.lower()
         if requested != "auto":
             if requested.startswith("cuda") and not torch.cuda.is_available():
-                raise ValueError("CUDA was requested but is not available.")
+                torch_version = getattr(torch, "__version__", "unknown")
+                compiled_cuda = getattr(torch.version, "cuda", None) or "none"
+                raise ValueError(
+                    "CUDA was requested but is not available. "
+                    f"Installed torch={torch_version} (CUDA build={compiled_cuda}). "
+                    "Install a wheel compatible with the host driver, or use device='cpu'."
+                )
             if requested == "mps" and not getattr(torch.backends, "mps", None).is_available():
                 raise ValueError("MPS was requested but is not available.")
             return torch.device(requested)
