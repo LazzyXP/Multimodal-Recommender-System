@@ -59,6 +59,8 @@ PyArrow. The optional graph layer uses the official PyTorch wheel for the curren
 Python/OS/accelerator combination; CPU works on macOS, Linux and Windows, while
 CUDA and Apple MPS are selected automatically when available. Set `device="cpu"`,
 `device="cuda"` or `device="mps"` on an explicit graph model to override selection.
+The torch extra is constrained below 2.7 for CUDA 12.x hosts; newer torch wheels may
+require CUDA 13 and report CUDA as unavailable on older NVIDIA drivers.
 For a complete platform and China-mirror installation matrix, see
 [installation.md](docs/installation.md). CUDA is for NVIDIA Linux/Windows hosts;
 macOS uses MPS or CPU.

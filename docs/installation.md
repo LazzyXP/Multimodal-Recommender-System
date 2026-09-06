@@ -37,8 +37,9 @@ python -m pip install ".[torch]" \
 ## Linux or Windows NVIDIA CUDA
 
 The CUDA runtime is provided by the PyTorch wheel. The host still needs a compatible
-NVIDIA driver; installing the full CUDA toolkit is optional for this package. Pick a
-PyTorch CUDA channel supported by the installed driver, for example `cu124`:
+NVIDIA driver; installing the full CUDA toolkit is optional for this package. The
+package constrains torch below 2.7 because newer wheels may require CUDA 13. For a
+CUDA 12.4 host, use the matching `cu124` channel:
 
 ```bash
 uv pip install torch \

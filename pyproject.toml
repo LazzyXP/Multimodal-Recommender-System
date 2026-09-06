@@ -1,6 +1,6 @@
 [project]
 name = "multimodal-recommender"
-version = "0.1.0"
+version = "0.1.1"
 description = "AutoML-style multimodal recommendation toolkit"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -28,7 +28,8 @@ Issues = "https://github.com/LazzyXP/Multimodal-Recommender-System/issues"
 Documentation = "https://github.com/LazzyXP/Multimodal-Recommender-System/blob/main/README.md"
 
 [project.optional-dependencies]
-torch = ["torch>=2.2"]
+# Keep the optional wheel compatible with CUDA 12.x deployment images.
+torch = ["torch>=2.2,<2.7"]
 faiss = ["faiss-cpu>=1.8"]
 all = ["torch>=2.2", "faiss-cpu>=1.8"]
 
