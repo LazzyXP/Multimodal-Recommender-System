@@ -31,8 +31,9 @@ Official instructions: https://docs.pypi.org/trusted-publishers/creating-a-proje
    source distribution, and tests the wheel on Linux/macOS/Windows with Python 3.11 and 3.12.
    The installed-package smoke test runs outside the checkout and exercises training, recommendation,
    save/load and the CLI. Optional torch models have their own existing CI job.
-3. The repository already contains the matching `v0.1.2` tag. Create a GitHub Release from that
-   tag, targeting the tested commit. A plain tag push or manual workflow run only builds/tests;
+3. The repository already contains the matching `v0.1.2` tag. Open the direct release page
+   <https://github.com/LazzyXP/Multimodal-Recommender-System/releases/new?tag=v0.1.2>, choose
+   `v0.1.2`, and publish the release. A plain tag push or manual workflow run only builds/tests;
    publishing requires a published Release.
 4. The workflow verifies the tag against package metadata and uploads the tested artifacts to PyPI.
    Review the `publish` job result; a successful GitHub Release alone is not evidence of a PyPI upload.
