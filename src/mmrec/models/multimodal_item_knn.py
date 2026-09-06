@@ -8,6 +8,7 @@ option name does not imply approximate retrieval or bounded catalog memory.
 
 from __future__ import annotations
 
+import warnings
 from typing import Any
 
 import numpy as np
@@ -63,6 +64,12 @@ class MultiModalItemKNNModel(BaseRecommendationModel):
             index.add(self.feature_matrix.astype(np.float32))
             return index
         except ImportError:
+            warnings.warn(
+                "use_ann=True requested but faiss-cpu is unavailable; falling back to "
+                "NumPy exact inner-product scoring.",
+                UserWarning,
+                stacklevel=2,
+            )
             return None
 
     def score_all_items(self, user_id: Any, history: set[Any]) -> np.ndarray | None:
