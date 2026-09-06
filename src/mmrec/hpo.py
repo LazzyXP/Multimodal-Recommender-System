@@ -33,6 +33,12 @@ class TpeSearch:
         empty = [parameter for parameter, choices in space.items() if not choices]
         if empty:
             raise ValueError(f"HPO choices cannot be empty: {empty}")
+        if not 0 < gamma <= 1:
+            raise ValueError("HPO gamma must be greater than zero and at most one.")
+        if warmup < 0:
+            raise ValueError("HPO warmup must be non-negative.")
+        if candidates < 1:
+            raise ValueError("HPO candidates must be positive.")
         self.space = space
         self.gamma = gamma
         self.warmup = warmup

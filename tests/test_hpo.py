@@ -10,6 +10,12 @@ def test_tpe_rejects_empty_search_space() -> None:
         TpeSearch({})
     with pytest.raises(ValueError, match="choices cannot be empty"):
         TpeSearch({"lr": []})
+    with pytest.raises(ValueError, match="gamma"):
+        TpeSearch({"lr": [0.01]}, gamma=0)
+    with pytest.raises(ValueError, match="warmup"):
+        TpeSearch({"lr": [0.01]}, warmup=-1)
+    with pytest.raises(ValueError, match="candidates"):
+        TpeSearch({"lr": [0.01]}, candidates=0)
 
 
 def test_tpe_warmup_returns_random_configs() -> None:
