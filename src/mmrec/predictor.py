@@ -1201,11 +1201,15 @@ class MultiModalRecommender:
     ) -> Path:
         """Generate recommendations in bounded batches and stream them to Parquet."""
         self._require_fitted()
+        if k <= 0:
+            raise ValueError("k must be positive.")
         output = Path(path)
         output.parent.mkdir(parents=True, exist_ok=True)
         temporary = output.with_name(f".{output.name}.{uuid.uuid4().hex}.tmp")
         writer: parquet.ParquetWriter | None = None
-        size = batch_size or self.execution.inference_batch_size
+        size = self.execution.inference_batch_size if batch_size is None else batch_size
+        if size <= 0:
+            raise ValueError("batch_size must be positive.")
         batches = self._iter_inference_users(users, size)
         wrote_rows = False
         try:
@@ -1552,6 +1556,8 @@ class MultiModalRecommender:
         users: TableInput | list[Any],
         batch_size: int,
     ):
+        if batch_size <= 0:
+            raise ValueError("batch_size must be positive.")
         if isinstance(users, list):
             if not users:
                 raise ValueError("users must contain at least one user identifier.")

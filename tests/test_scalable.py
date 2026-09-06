@@ -86,6 +86,16 @@ def test_recommend_to_parquet_accepts_user_file(tmp_path: Path) -> None:
     assert set(recommendations["model"]) == {"Popularity", "ItemCF", "RankFusion"}
 
 
+def test_recommend_to_parquet_rejects_non_positive_batch_size(tmp_path: Path) -> None:
+    source = tmp_path / "interactions.parquet"
+    _large_fixture().to_parquet(source, index=False)
+    predictor = MultiModalRecommender(cache_dir=tmp_path / "cache").fit(
+        source, models="Popularity"
+    )
+    with pytest.raises(ValueError, match="batch_size must be positive"):
+        predictor.recommend_to_parquet(["u0"], tmp_path / "out.parquet", batch_size=0)
+
+
 def test_streaming_model_can_bundle_history_index(tmp_path: Path) -> None:
     source = tmp_path / "interactions.parquet"
     _large_fixture().to_parquet(source, index=False)

@@ -65,7 +65,10 @@ def scan_and_sample_interactions(
     for record_batch in scanner.to_batches():
         frame = record_batch.to_pandas()
         if columns.label:
-            frame = frame[frame[columns.label] > 0]
+            labels = pd.to_numeric(frame[columns.label], errors="coerce")
+            if labels.isna().any():
+                raise ValueError(f"interactions.{columns.label} must contain numeric values.")
+            frame = frame[labels > 0]
         if frame.empty:
             continue
         if frame[[columns.user_id, columns.item_id]].isna().any().any():
