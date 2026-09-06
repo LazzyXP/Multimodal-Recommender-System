@@ -62,6 +62,7 @@ def run_once(items: int, users: int, dimensions: int, seed: int, backend: str) -
     started = perf_counter()
     model.fit(interactions, dataset)
     fit_seconds = perf_counter() - started
+    effective_backend = backend if model._ann_index is not None else "numpy"
     started = perf_counter()
     result = model.recommend(user_ids, k=20)
     recommend_seconds = perf_counter() - started
@@ -86,6 +87,7 @@ def run_once(items: int, users: int, dimensions: int, seed: int, backend: str) -
         exact_recalls.append(len(exact_items & observed) / limit)
     return {
         "backend": backend,
+        "effective_backend": effective_backend,
         "items": items,
         "users": users,
         "dimensions": dimensions,
