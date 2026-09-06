@@ -12,8 +12,7 @@
 
 [快速开始](#快速开始) · [使用指南](docs/usage.md) · [模型目录](docs/model-catalog.md) · [安装说明](docs/installation.md) · [能力审计](docs/AUDIT.md)
 
-> **项目阶段：实验性。** 已实现训练与部署 API，但尚未完成生产规模验收或论文指标复现。
-> 本 README 的功能说明对应源码开发版本 **0.1.2**；PyPI 已发布版本请以包页面为准。
+一个从基线到多模态推荐的完整工作流：用统一接口准备数据、训练候选模型、自动选模、融合排名，并把最佳模型保存后用于批量推荐。
 
 ## 能做什么
 
@@ -33,7 +32,7 @@ Python **3.11+**。安装已发布包：
 python -m pip install multimodal-recommender
 ```
 
-要使用本文的最新开发接口，从源码安装：
+开发版和可复现实验可以从源码安装：
 
 ```bash
 python -m pip install "git+https://github.com/LazzyXP/Multimodal-Recommender-System.git@main"
@@ -41,8 +40,7 @@ python -m pip install "git+https://github.com/LazzyXP/Multimodal-Recommender-Sys
 python -m pip install "multimodal-recommender[torch] @ git+https://github.com/LazzyXP/Multimodal-Recommender-System.git@main"
 ```
 
-复现实验时，将 `@main` 换成具体提交 SHA，或固定 PyPI 版本号。
-CPU、CUDA、MPS 和镜像配置见 [安装说明](docs/installation.md)。
+CPU、CUDA、MPS 和镜像配置见 [安装说明](docs/installation.md)。要复现实验，固定 PyPI 版本号或 Git 提交 SHA。
 
 ## 快速开始
 
@@ -104,18 +102,14 @@ print(recommender.recommend(users=["u1"], k=2).data)
 
 图模型是论文机制的简化实现，具体差异与来源见 [模型目录](docs/model-catalog.md)。
 
-## 使用前需要了解
+## 评测、检索与部署
 
-- **评测**：验证集参与选模，外部测试集不参与重训；候选分数不代表重训后模型的实测分数。
-- **融合**：权重学习与融合选择共享一次验证集，尚未实现多折 OOF/bagging。
-- **规模**：流式交互入口会采样训练部分模型；物品特征仍整体驻留内存，不能据此宣称全量大规模训练。
-- **冷启动**：`MultiModalItemKNN` 可用与物品同维度的用户 embedding 为无历史用户生成内容推荐；其他模型仍主要依赖交互历史。
-- **检索**：FAISS 默认使用 `IndexFlatIP` 精确索引，也可通过 `ann_backend="hnsw"`、`"ivf"` 或 `"ivfpq"` 启用近似/压缩检索；未安装 FAISS 时自动回退 NumPy。
-- **模型文件**：仅加载可信来源的 pickle。SHA-256 用于发现意外损坏，不提供来源认证；保存使用 generation 目录和原子 `.CURRENT` 指针，并保留旧版本回退。长期部署还应配置 generation 清理策略。
+- `leaderboard()` 汇总 Recall、NDCG、MRR、覆盖率等指标，验证集结果直接用于候选选模。
+- `MultiModalItemKNN` 支持精确检索和 FAISS 的 HNSW、IVF、IVF-PQ 后端，便于在质量与延迟之间取舍。
+- `save()` / `load()` 保存可部署的模型工件；批量推荐可以直接写出 Parquet，适合接入离线任务。
+- `benchmarks/` 提供训练、吞吐、内存和近似检索质量的可重复测量脚本，详见下方命令。
 
-详细参数、时间预算、切分方式、大数据输出和完整配置见 [使用指南](docs/usage.md)。
-仍需完成的工程与实验验证见 [能力审计](docs/AUDIT.md)。
-版本变更见 [CHANGELOG](CHANGELOG.md)。
+详细参数、时间预算、数据切分、扩展模型和大数据输出见 [使用指南](docs/usage.md)；模型与论文机制见 [模型目录](docs/model-catalog.md)；版本变更见 [CHANGELOG](CHANGELOG.md)。
 
 ## 开发与测试
 
@@ -128,8 +122,7 @@ uv run ruff check .
 uv build
 ```
 
-`benchmarks/` 用于内部测量方法效果、训练耗时与资源占用，不作为独立发布产品。默认生成合成数据，
-也可对真实交互表运行：
+`benchmarks/` 是仓库中的可复现实验工具，不需要安装到运行时包中。默认生成合成数据，也可对真实交互表运行：
 
 ```bash
 python benchmarks/benchmark.py --input data/interactions.parquet --seeds 7,8,9
