@@ -31,8 +31,9 @@ Official instructions: https://docs.pypi.org/trusted-publishers/creating-a-proje
    source distribution, and tests the wheel on Linux/macOS/Windows with Python 3.11 and 3.12.
    The installed-package smoke test runs outside the checkout and exercises training, recommendation,
    save/load and the CLI. Optional torch models have their own existing CI job.
-3. Create a GitHub Release with a matching tag, for example `v0.1.2`, targeting that tested commit.
-   A plain push or manual workflow run only builds/tests; publishing requires a published Release.
+3. The repository already contains the matching `v0.1.2` tag. Create a GitHub Release from that
+   tag, targeting the tested commit. A plain tag push or manual workflow run only builds/tests;
+   publishing requires a published Release.
 4. The workflow verifies the tag against package metadata and uploads the tested artifacts to PyPI.
    Review the `publish` job result; a successful GitHub Release alone is not evidence of a PyPI upload.
 5. Verify the matching PyPI version exists, then use a fresh environment:
@@ -46,7 +47,8 @@ Official instructions: https://docs.pypi.org/trusted-publishers/creating-a-proje
 
    The commands above are the **post-publication acceptance check**.
    On Windows use the virtual environment's `Scripts/python.exe` and `Scripts/mmrec.exe`.
-6. Update the README's pinned installation version after the upload succeeds.
+6. Update the README's pinned installation version after the upload succeeds. Until then, the
+   public PyPI version remains the last verified upload (`0.1.0`).
 
 PyPI does not allow replacing an already uploaded version's files. Fixes after a successful upload
 require a new version and matching tag. If only some files uploaded, inspect PyPI before retrying.
