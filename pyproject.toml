@@ -31,7 +31,7 @@ Documentation = "https://github.com/LazzyXP/Multimodal-Recommender-System/blob/m
 # Keep the optional wheel compatible with CUDA 12.x deployment images.
 torch = ["torch>=2.2,<2.7"]
 faiss = ["faiss-cpu>=1.8"]
-all = ["torch>=2.2", "faiss-cpu>=1.8"]
+all = ["torch>=2.2,<2.7", "faiss-cpu>=1.8"]
 
 [project.scripts]
 mmrec = "mmrec.cli:main"
