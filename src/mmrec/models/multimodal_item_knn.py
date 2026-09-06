@@ -29,6 +29,7 @@ class MultiModalItemKNNModel(BaseRecommendationModel):
         self.use_ann = use_ann
         self.ann_topk = ann_topk
         self._ann_index: Any = None
+        self.user_vectors: dict[Any, np.ndarray] = {}
 
     def fit(
         self,
@@ -50,6 +51,21 @@ class MultiModalItemKNNModel(BaseRecommendationModel):
         self.feature_matrix = matrix
         self.item_indices = {item_id: index for index, item_id in enumerate(item_ids)}
         self.item_vectors = {item_id: matrix[index] for index, item_id in enumerate(item_ids)}
+        user_modalities = dataset.modalities.get("user", {})
+        if user_modalities and dataset.users is not None:
+            user_ids, user_matrix = encode_item_features(
+                dataset.users,
+                self.columns.user_id,
+                user_modalities,
+            )
+            if user_matrix.shape[1] != matrix.shape[1]:
+                raise ValueError(
+                    "user and item modality encodings must have the same feature dimension "
+                    "for MultiModalItemKNN cold-start scoring."
+                )
+            self.user_vectors = {
+                user_id: user_matrix[index] for index, user_id in enumerate(user_ids)
+            }
         counts = interactions[self.columns.item_id].value_counts()
         maximum = float(counts.max()) if not counts.empty else 1.0
         self.popularity = {item_id: float(count / maximum) for item_id, count in counts.items()}
@@ -73,15 +89,18 @@ class MultiModalItemKNNModel(BaseRecommendationModel):
             return None
 
     def score_all_items(self, user_id: Any, history: set[Any]) -> np.ndarray | None:
-        del user_id
         history_vectors = [
             self.item_vectors[item_id]
             for item_id in history
             if item_id in self.item_vectors
         ]
-        if not history_vectors:
+        if history_vectors:
+            profile_vectors = history_vectors
+        elif user_id in self.user_vectors:
+            profile_vectors = [self.user_vectors[user_id]]
+        else:
             return None
-        profile = np.mean(history_vectors, axis=0)
+        profile = np.mean(profile_vectors, axis=0)
         norm = np.linalg.norm(profile)
         if norm == 0:
             return None
@@ -109,9 +128,13 @@ class MultiModalItemKNNModel(BaseRecommendationModel):
                 for item_id in histories.get(user_id, ())
                 if item_id in self.item_vectors
             ]
-            if not history_vectors:
+            if history_vectors:
+                profile_vectors = history_vectors
+            elif user_id in self.user_vectors:
+                profile_vectors = [self.user_vectors[user_id]]
+            else:
                 return None
-            profile = np.mean(history_vectors, axis=0)
+            profile = np.mean(profile_vectors, axis=0)
             norm = np.linalg.norm(profile)
             if norm == 0:
                 return None
@@ -132,16 +155,19 @@ class MultiModalItemKNNModel(BaseRecommendationModel):
         item_ids: list[Any],
         history: set[Any],
     ) -> dict[Any, float]:
-        del user_id
         history_vectors = [
             self.item_vectors[item_id]
             for item_id in history
             if item_id in self.item_vectors
         ]
-        if not history_vectors:
+        if history_vectors:
+            profile_vectors = history_vectors
+        elif user_id in self.user_vectors:
+            profile_vectors = [self.user_vectors[user_id]]
+        else:
             return {item: self.popularity.get(item, 0.0) for item in item_ids}
 
-        profile = np.mean(history_vectors, axis=0)
+        profile = np.mean(profile_vectors, axis=0)
         profile_norm = np.linalg.norm(profile)
         if profile_norm:
             profile = profile / profile_norm

@@ -226,6 +226,10 @@ recommender.evaluation_report.export("artifacts/report")
 recommender.save("artifacts/model")
 ```
 
+当使用 `MultiModalItemKNN` 做用户冷启动时，用户和物品需要声明同维度的
+`embedding`/`image` 特征。模型会在用户没有交互历史时直接用用户向量检索物品；没有
+用户向量的其他模型仍会回退到各自的历史或热门度策略。
+
 推荐结果使用统一长表：
 
 | user_id | item_id | rank | score | model |

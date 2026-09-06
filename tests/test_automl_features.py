@@ -116,6 +116,38 @@ def test_ann_falls_back_to_exact_when_faiss_missing(interactions: pd.DataFrame) 
     assert not recommendations.empty
 
 
+def test_multimodal_knn_uses_user_modalities_for_cold_start(
+    interactions: pd.DataFrame,
+) -> None:
+    items = pd.DataFrame(
+        {
+            "item_id": ["a", "b", "c", "d", "e"],
+            "embedding": [[1.0, 0.0], [0.9, 0.1], [0.0, 1.0], [0.1, 0.9], [0.7, 0.3]],
+        }
+    )
+    users = pd.DataFrame(
+        {
+            "user_id": ["u1", "u2", "u3", "u4", "cold"],
+            "embedding": [[1.0, 0.0], [0.0, 1.0], [0.8, 0.2], [0.2, 0.8], [1.0, 0.0]],
+        }
+    )
+    predictor = MultiModalRecommender(eval_metrics=["recall@3"])
+    predictor.fit(
+        interactions,
+        users=users,
+        items=items,
+        modalities={
+            "user": {"embedding": "embedding"},
+            "item": {"embedding": "embedding"},
+        },
+        models="MultiModalItemKNN",
+    )
+    recommendations = predictor.recommend(
+        users=["cold"], k=2, include_ensemble=False
+    ).data
+    assert recommendations["item_id"].tolist() == ["a", "b"]
+
+
 def test_checkpoint_resume_reuses_models(interactions: pd.DataFrame, tmp_path) -> None:
     checkpoint = tmp_path / "checkpoint"
     first = MultiModalRecommender(eval_metrics=["recall@3"])
