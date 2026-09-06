@@ -187,3 +187,17 @@ def test_negative_sampler_resolves_collisions_and_rejects_full_catalog() -> None
     full_mask = common.build_positive_mask(torch.tensor([0, 0, 0]), torch.tensor([0, 1, 2]), 1, 3)
     with pytest.raises(ValueError, match="full catalog"):
         common.sample_negatives(torch.tensor([0]), 3, full_mask, generator)
+
+
+def test_large_graph_uses_sparse_positive_index() -> None:
+    edges_users = torch.tensor([0, 0, 1], dtype=torch.long)
+    edges_items = torch.tensor([1, 3, 2], dtype=torch.long)
+    index = common.build_positive_mask(
+        edges_users, edges_items, num_users=10_000, num_items=100_000, max_dense_bytes=1
+    )
+    assert isinstance(index, common.SparsePositiveIndex)
+    negative = common.sample_negatives(
+        torch.tensor([0, 1]), 100_000, index, torch.Generator().manual_seed(0)
+    )
+    assert negative.tolist()[0] not in {1, 3}
+    assert negative.tolist()[1] != 2

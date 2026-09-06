@@ -14,6 +14,26 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
+
+class SparsePositiveIndex:
+    """Memory-bounded positive-item index for very large user/item graphs.
+
+    The dense bit mask is faster for ordinary datasets, but its shape is
+    ``users x ceil(items / 8)`` and can become enormous even when the graph is
+    sparse. This index stores only observed user-item edges and is selected
+    automatically by ``build_positive_mask`` when the dense allocation would
+    exceed the configured budget.
+    """
+
+    def __init__(self, users: np.ndarray, items: np.ndarray) -> None:
+        self.by_user: dict[int, set[int]] = {}
+        for user, item in zip(users.tolist(), items.tolist(), strict=False):
+            self.by_user.setdefault(int(user), set()).add(int(item))
+
+    def contains(self, user: int, item: int) -> bool:
+        return item in self.by_user.get(user, ())
+
+
 MAX_SIMILARITY_BYTES = 128 * 1024 * 1024
 
 
@@ -52,9 +72,7 @@ class _SymmetricInfoNCE(torch.autograd.Function):
             row_lse[start : start + chunk] = block.logsumexp(dim=1)
             column_block = block.logsumexp(dim=0)
             column_lse = (
-                column_block
-                if column_lse is None
-                else torch.logaddexp(column_lse, column_block)
+                column_block if column_lse is None else torch.logaddexp(column_lse, column_block)
             )
         loss = 0.5 * ((row_lse - positives).mean() + (column_lse - positives).mean())
         ctx.save_for_backward(first, second, row_lse, column_lse)
@@ -288,7 +306,8 @@ def build_positive_mask(
     edge_items: torch.Tensor,
     num_users: int,
     num_items: int,
-) -> np.ndarray:
+    max_dense_bytes: int = 512 * 1024 * 1024,
+) -> np.ndarray | SparsePositiveIndex:
     """Build a bit-packed (n_users, ceil(n_items/8)) uint8 positive mask.
 
     Each user's liked items are stored as set bits, so the collision check in
@@ -298,6 +317,8 @@ def build_positive_mask(
     users = edge_users.detach().cpu().numpy().astype(np.int64)
     items = edge_items.detach().cpu().numpy().astype(np.int64)
     width = (num_items + 7) >> 3
+    if num_users * width > max_dense_bytes:
+        return SparsePositiveIndex(users, items)
     mask = np.zeros((num_users, width), dtype=np.uint8)
     np.bitwise_or.at(mask, (users, items >> 3), np.uint8(1) << (items & 7))
     return mask
@@ -306,7 +327,7 @@ def build_positive_mask(
 def sample_negatives(
     users: torch.Tensor,
     num_items: int,
-    positive_mask: np.ndarray,
+    positive_mask: np.ndarray | SparsePositiveIndex,
     rng: torch.Generator,
 ) -> torch.Tensor:
     """Sample one negative item per user, rejecting items the user already liked.
@@ -317,6 +338,25 @@ def sample_negatives(
     count = users.numel()
     users_np = users.detach().cpu().numpy().astype(np.int64)
     negatives = torch.randint(0, num_items, (count,), generator=rng)
+    if isinstance(positive_mask, SparsePositiveIndex):
+        negative_np = negatives.numpy()
+        for index, user in enumerate(users_np.tolist()):
+            start = int(negative_np[index])
+            for _ in range(10):
+                if not positive_mask.contains(int(user), int(negative_np[index])):
+                    break
+                negative_np[index] = int(torch.randint(0, num_items, (1,), generator=rng))
+            if positive_mask.contains(int(user), int(negative_np[index])):
+                for offset in range(num_items):
+                    candidate = (start + offset) % num_items
+                    if not positive_mask.contains(int(user), candidate):
+                        negative_np[index] = candidate
+                        break
+                else:
+                    raise ValueError(
+                        "Cannot sample a negative item for a user who has seen the full catalog."
+                    )
+        return negatives
     for _ in range(10):
         negative_np = negatives.numpy()
         word = negative_np >> 3
