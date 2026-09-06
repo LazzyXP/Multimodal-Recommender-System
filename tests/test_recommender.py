@@ -72,6 +72,14 @@ def test_save_and_load(fitted: MultiModalRecommender, tmp_path) -> None:
     pd.testing.assert_frame_equal(expected, actual)
 
 
+def test_load_rejects_tampered_artifact(fitted: MultiModalRecommender, tmp_path) -> None:
+    model_path = fitted.save(tmp_path / "model")
+    artifact = model_path / "recommender.pkl"
+    artifact.write_bytes(artifact.read_bytes() + b"tampered")
+    with pytest.raises(ValueError, match="integrity check"):
+        MultiModalRecommender.load(model_path)
+
+
 def test_validates_declared_modalities(interactions: pd.DataFrame) -> None:
     items = pd.DataFrame({"item_id": ["a", "b", "c", "d", "e"], "title": ["a"] * 5})
     predictor = MultiModalRecommender()

@@ -58,6 +58,14 @@ from mmrec.scalable import (
 from mmrec.storage import ParquetCache, file_fingerprint, frame_fingerprint
 
 
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 class MultiModalRecommender:
     """Train, compare, and fuse multiple recommendation models.
 
@@ -1371,6 +1379,7 @@ class MultiModalRecommender:
             self.history_index = original_history_index
         metadata = {
             "format_version": 2,
+            "artifact_sha256": _sha256_file(target / "recommender.pkl"),
             "model_best": self.model_best,
             "eval_metric": self.eval_metric,
             "package_version": self._package_version(),
@@ -1394,6 +1403,18 @@ class MultiModalRecommender:
         source = Path(path) / "recommender.pkl"
         if not source.exists():
             raise FileNotFoundError(f"Saved recommender not found: {source}")
+        metadata_path = source.parent / "metadata.json"
+        if metadata_path.exists():
+            try:
+                metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+                expected_hash = metadata.get("artifact_sha256")
+            except (OSError, ValueError) as exc:
+                raise ValueError(f"Invalid model metadata: {metadata_path}") from exc
+            if expected_hash and expected_hash != _sha256_file(source):
+                raise ValueError(
+                    "Saved recommender artifact failed its integrity check; the model may be "
+                    "corrupted or was modified after saving."
+                )
         with source.open("rb") as handle:
             value = pickle.load(handle)  # noqa: S301 - persisted models must come from trusted runs.
         if not isinstance(value, cls):
