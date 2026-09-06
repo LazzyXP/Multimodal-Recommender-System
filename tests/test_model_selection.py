@@ -71,6 +71,32 @@ def test_multimodal_ann_backend_validation() -> None:
     assert (ivfpq.ann_pq_m, ivfpq.ann_pq_nbits) == (4, 8)
 
 
+@pytest.mark.parametrize("backend", ["hnsw", "ivf", "ivfpq"])
+def test_faiss_backends_build_when_optional_dependency_is_available(
+    backend: str,
+) -> None:
+    pytest.importorskip("faiss")
+    interactions, items = _data()
+    predictor = MultiModalRecommender(eval_metrics=["recall@3"])
+    predictor.fit(
+        interactions,
+        items=items,
+        modalities={"item": {"embedding": "image_embedding"}},
+        models="MultiModalItemKNN",
+        model_configs={
+            "MultiModalItemKNN": {
+                "use_ann": True,
+                "ann_backend": backend,
+                "ann_topk": 3,
+                "ann_nlist": 2,
+                "ann_nprobe": 1,
+                "ann_pq_m": 2,
+            }
+        },
+    )
+    assert predictor.recommend(users=["u1"], k=2, include_ensemble=False).data.shape[0] == 2
+
+
 def test_model_catalog_exposes_families_and_references() -> None:
     predictor = MultiModalRecommender()
     catalog = predictor.model_catalog().set_index("name")

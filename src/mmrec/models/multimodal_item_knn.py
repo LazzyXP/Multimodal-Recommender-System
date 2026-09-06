@@ -125,12 +125,13 @@ class MultiModalItemKNNModel(BaseRecommendationModel):
                         raise ValueError(
                             "feature dimension must be divisible by ann_pq_m for ivfpq."
                         )
+                    effective_nbits = min(self.ann_pq_nbits, max(1, int(np.log2(len(vectors)))))
                     index = faiss.IndexIVFPQ(
                         quantizer,
                         self.feature_matrix.shape[1],
                         nlist,
                         self.ann_pq_m,
-                        self.ann_pq_nbits,
+                        effective_nbits,
                         faiss.METRIC_INNER_PRODUCT,
                     )
                 else:
