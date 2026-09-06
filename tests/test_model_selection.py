@@ -115,6 +115,23 @@ def test_faiss_backend_is_used_by_batched_recommendation() -> None:
     assert np.count_nonzero(scores[0]) <= model.ann_topk
 
 
+def test_faiss_warns_when_requested_k_exceeds_candidate_budget() -> None:
+    pytest.importorskip("faiss")
+    interactions, items = _data()
+    predictor = MultiModalRecommender(eval_metrics=["recall@3"])
+    predictor.fit(
+        interactions,
+        items=items,
+        modalities={"item": {"embedding": "image_embedding"}},
+        models="MultiModalItemKNN",
+        model_configs={
+            "MultiModalItemKNN": {"use_ann": True, "ann_backend": "hnsw", "ann_topk": 1}
+        },
+    )
+    with pytest.warns(UserWarning, match="exceeds ann_topk"):
+        predictor.recommend(users=["u1"], k=2, include_ensemble=False)
+
+
 def test_model_catalog_exposes_families_and_references() -> None:
     predictor = MultiModalRecommender()
     catalog = predictor.model_catalog().set_index("name")

@@ -193,6 +193,22 @@ class MultiModalItemKNNModel(BaseRecommendationModel):
             return scores
         return self.feature_matrix @ profile
 
+    def recommend(
+        self,
+        users: list[Any],
+        k: int,
+        exclude_seen: bool = True,
+        seen_override: dict[Any, set[Any]] | None = None,
+    ) -> pd.DataFrame:
+        if self._ann_index is not None and k > self.ann_topk:
+            warnings.warn(
+                f"k={k} exceeds ann_topk={self.ann_topk}; approximate retrieval can return "
+                "fewer than k useful candidates. Increase ann_topk for better recall.",
+                UserWarning,
+                stacklevel=2,
+            )
+        return super().recommend(users, k, exclude_seen, seen_override)
+
     def score_all_users(
         self, users: list[Any], histories: dict[Any, set[Any]]
     ) -> np.ndarray | None:
