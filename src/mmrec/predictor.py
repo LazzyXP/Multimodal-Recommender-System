@@ -1411,9 +1411,16 @@ class MultiModalRecommender:
         if not source.exists():
             raise FileNotFoundError(f"Saved recommender not found: {source}")
         metadata_path = source.parent / "metadata.json"
+        metadata: dict[str, Any] | None = None
         if metadata_path.exists():
             try:
                 metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+                if not isinstance(metadata, dict):
+                    raise ValueError("metadata must be a JSON object")
+                if metadata.get("format_version", 1) > 2:
+                    raise ValueError(
+                        f"Unsupported model metadata format: {metadata['format_version']}"
+                    )
                 expected_hash = metadata.get("artifact_sha256")
             except (OSError, ValueError) as exc:
                 raise ValueError(f"Invalid model metadata: {metadata_path}") from exc
@@ -1426,6 +1433,13 @@ class MultiModalRecommender:
             value = pickle.load(handle)  # noqa: S301 - persisted models must come from trusted runs.
         if not isinstance(value, cls):
             raise TypeError(f"The saved object is not a {cls.__name__}.")
+        if metadata is not None:
+            declared_models = metadata.get("models")
+            if declared_models is not None and set(declared_models) != set(value.models):
+                raise ValueError("Saved model metadata does not match the artifact model list.")
+            declared_best = metadata.get("model_best")
+            if declared_best is not None and declared_best != value.model_best:
+                raise ValueError("Saved model metadata does not match the selected best model.")
         if not hasattr(value, "model_best"):
             value.model_best = next(iter(value.models), None)
             value.eval_metric = value.eval_metrics[0]

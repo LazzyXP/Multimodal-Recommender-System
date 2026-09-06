@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 import pandas as pd
 import pytest
 
@@ -77,6 +79,16 @@ def test_load_rejects_tampered_artifact(fitted: MultiModalRecommender, tmp_path)
     artifact = model_path / "recommender.pkl"
     artifact.write_bytes(artifact.read_bytes() + b"tampered")
     with pytest.raises(ValueError, match="integrity check"):
+        MultiModalRecommender.load(model_path)
+
+
+def test_load_rejects_mismatched_metadata(fitted: MultiModalRecommender, tmp_path) -> None:
+    model_path = fitted.save(tmp_path / "model")
+    metadata_path = model_path / "metadata.json"
+    metadata = json.loads(metadata_path.read_text())
+    metadata["models"] = ["NotARealModel"]
+    metadata_path.write_text(json.dumps(metadata))
+    with pytest.raises(ValueError, match="model list"):
         MultiModalRecommender.load(model_path)
 
 
