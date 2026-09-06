@@ -4,7 +4,8 @@ Scoring defaults to an exact vectorized inner product (BLAS), which is optimal
 for exact recall. When ``use_ann=True`` and the optional ``faiss-cpu`` package
 is installed, ``ann_backend="flat"`` uses exact IndexFlatIP and
 ``ann_backend="hnsw"`` enables approximate HNSW retrieval and
-``ann_backend="ivf"`` enables trained IVF retrieval.
+``ann_backend="ivf"`` enables trained IVF retrieval; ``"ivfpq"`` adds
+product-quantized compression for large catalogs.
 """
 
 from __future__ import annotations
@@ -33,12 +34,14 @@ class MultiModalItemKNNModel(BaseRecommendationModel):
         ann_ef_search: int = 64,
         ann_nlist: int = 64,
         ann_nprobe: int = 8,
+        ann_pq_m: int = 8,
+        ann_pq_nbits: int = 8,
     ) -> None:
         super().__init__(columns)
         if ann_topk <= 0:
             raise ValueError("ann_topk must be positive.")
-        if ann_backend not in {"flat", "hnsw", "ivf"}:
-            raise ValueError("ann_backend must be 'flat', 'hnsw', or 'ivf'.")
+        if ann_backend not in {"flat", "hnsw", "ivf", "ivfpq"}:
+            raise ValueError("ann_backend must be 'flat', 'hnsw', 'ivf', or 'ivfpq'.")
         if ann_hnsw_m <= 0:
             raise ValueError("ann_hnsw_m must be positive.")
         if ann_ef_search <= 0:
@@ -47,6 +50,10 @@ class MultiModalItemKNNModel(BaseRecommendationModel):
             raise ValueError("ann_nlist must be positive.")
         if ann_nprobe <= 0:
             raise ValueError("ann_nprobe must be positive.")
+        if ann_pq_m <= 0:
+            raise ValueError("ann_pq_m must be positive.")
+        if ann_pq_nbits <= 0:
+            raise ValueError("ann_pq_nbits must be positive.")
         self.use_ann = use_ann
         self.ann_topk = ann_topk
         self.ann_backend = ann_backend
@@ -54,6 +61,8 @@ class MultiModalItemKNNModel(BaseRecommendationModel):
         self.ann_ef_search = ann_ef_search
         self.ann_nlist = ann_nlist
         self.ann_nprobe = ann_nprobe
+        self.ann_pq_m = ann_pq_m
+        self.ann_pq_nbits = ann_pq_nbits
         self._ann_index: Any = None
         self.user_vectors: dict[Any, np.ndarray] = {}
 
@@ -108,12 +117,26 @@ class MultiModalItemKNNModel(BaseRecommendationModel):
                     self.feature_matrix.shape[1], self.ann_hnsw_m, faiss.METRIC_INNER_PRODUCT
                 )
                 index.hnsw.efSearch = max(self.ann_ef_search, self.ann_topk)
-            elif self.ann_backend == "ivf":
+            elif self.ann_backend in {"ivf", "ivfpq"}:
                 nlist = min(self.ann_nlist, len(vectors))
                 quantizer = faiss.IndexFlatIP(self.feature_matrix.shape[1])
-                index = faiss.IndexIVFFlat(
-                    quantizer, self.feature_matrix.shape[1], nlist, faiss.METRIC_INNER_PRODUCT
-                )
+                if self.ann_backend == "ivfpq":
+                    if self.feature_matrix.shape[1] % self.ann_pq_m != 0:
+                        raise ValueError(
+                            "feature dimension must be divisible by ann_pq_m for ivfpq."
+                        )
+                    index = faiss.IndexIVFPQ(
+                        quantizer,
+                        self.feature_matrix.shape[1],
+                        nlist,
+                        self.ann_pq_m,
+                        self.ann_pq_nbits,
+                        faiss.METRIC_INNER_PRODUCT,
+                    )
+                else:
+                    index = faiss.IndexIVFFlat(
+                        quantizer, self.feature_matrix.shape[1], nlist, faiss.METRIC_INNER_PRODUCT
+                    )
                 index.train(vectors)
                 index.nprobe = min(self.ann_nprobe, nlist)
             else:

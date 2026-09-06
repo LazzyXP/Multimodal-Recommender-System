@@ -65,6 +65,10 @@ def test_multimodal_ann_backend_validation() -> None:
         ColumnConfig(), use_ann=True, ann_backend="ivf", ann_nlist=4, ann_nprobe=2
     )
     assert (ivf.ann_nlist, ivf.ann_nprobe) == (4, 2)
+    ivfpq = MultiModalItemKNNModel(
+        ColumnConfig(), use_ann=True, ann_backend="ivfpq", ann_pq_m=4, ann_pq_nbits=8
+    )
+    assert (ivfpq.ann_pq_m, ivfpq.ann_pq_nbits) == (4, 8)
 
 
 def test_model_catalog_exposes_families_and_references() -> None:
