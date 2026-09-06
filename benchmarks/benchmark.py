@@ -44,15 +44,7 @@ def generate(users: int, items: int, rows: int, seed: int) -> pd.DataFrame:
     )
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--users", type=int, default=5_000)
-    parser.add_argument("--items", type=int, default=20_000)
-    parser.add_argument("--rows", type=int, default=200_000)
-    parser.add_argument("--input", type=Path, help="Real interactions CSV or Parquet file.")
-    parser.add_argument("--seed", type=int, default=0)
-    args = parser.parse_args()
-
+def run_once(args: argparse.Namespace, seed: int) -> dict[str, object]:
     if args.input:
         interactions = (
             pd.read_parquet(args.input)
@@ -65,7 +57,7 @@ def main() -> None:
         source = str(args.input)
         timestamp = "timestamp" if "timestamp" in interactions else None
     else:
-        interactions = generate(args.users, args.items, args.rows, args.seed)
+        interactions = generate(args.users, args.items, args.rows, seed)
         source = "synthetic"
         timestamp = "timestamp"
 
@@ -89,14 +81,12 @@ def main() -> None:
         result = recommender.recommend(target, k=20)
         recommend_seconds = perf_counter() - started
 
-        print(
-            json.dumps(
-                {
+        return {
                     "rows": len(interactions),
                     "users": int(interactions["user_id"].nunique()),
                     "items": int(interactions["item_id"].nunique()),
                     "source": source,
-                    "seed": args.seed,
+                    "seed": seed,
                     "fit_seconds": round(fit_seconds, 3),
                     "recommend_1000_users_seconds": round(recommend_seconds, 3),
                     "recommend_throughput_users_per_sec": round(1000 / recommend_seconds, 1),
@@ -106,11 +96,42 @@ def main() -> None:
                     "platform": platform.platform(),
                     "models": sorted(recommender.models),
                     "leaderboard": recommender.leaderboard().to_dict(orient="records"),
-                },
-                indent=2,
-                default=str,
-            )
+                }
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--users", type=int, default=5_000)
+    parser.add_argument("--items", type=int, default=20_000)
+    parser.add_argument("--rows", type=int, default=200_000)
+    parser.add_argument("--input", type=Path, help="Real interactions CSV or Parquet file.")
+    parser.add_argument(
+        "--seeds",
+        default="0",
+        help="Comma-separated random seeds; multiple values produce aggregate statistics.",
+    )
+    args = parser.parse_args()
+    try:
+        seeds = [int(value.strip()) for value in args.seeds.split(",") if value.strip()]
+    except ValueError as exc:
+        raise ValueError("--seeds must be a comma-separated list of integers.") from exc
+    if not seeds:
+        raise ValueError("--seeds must contain at least one integer.")
+    results = [run_once(args, seed) for seed in seeds]
+    aggregate: dict[str, object] = {}
+    if len(results) > 1:
+        metric_keys = (
+            "fit_seconds",
+            "recommend_1000_users_seconds",
+            "recommend_throughput_users_per_sec",
+            "peak_rss_mb",
         )
+        for key in metric_keys:
+            values = [float(result[key]) for result in results if result[key] is not None]
+            if values:
+                aggregate[f"{key}_mean"] = round(float(np.mean(values)), 3)
+                aggregate[f"{key}_std"] = round(float(np.std(values)), 3)
+    print(json.dumps({"runs": results, "aggregate": aggregate}, indent=2, default=str))
 
 
 if __name__ == "__main__":
