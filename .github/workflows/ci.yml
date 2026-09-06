@@ -40,5 +40,7 @@ jobs:
         run: uv sync --group dev --frozen
       - name: Install torch (CPU index)
         run: uv pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - name: Verify torch runtime is installed
+        run: uv run python -c "import torch; print(f'torch={torch.__version__}, cuda={torch.version.cuda}, available={torch.cuda.is_available()}')"
       - name: Test torch model layer
         run: uv run pytest tests/test_torch_models.py -q

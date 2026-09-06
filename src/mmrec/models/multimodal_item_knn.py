@@ -2,8 +2,8 @@
 
 Scoring defaults to an exact vectorized inner product (BLAS), which is optimal
 for exact recall. When ``use_ann=True`` and the optional ``faiss-cpu`` package
-is installed, an approximate nearest-neighbour index is built instead so the
-catalog can scale well beyond what an exact dense pass supports.
+is installed, a FAISS IndexFlatIP exact inner-product index is built. The legacy
+option name does not imply approximate retrieval or bounded catalog memory.
 """
 
 from __future__ import annotations

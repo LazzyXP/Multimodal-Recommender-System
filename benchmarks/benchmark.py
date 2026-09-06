@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import platform
 import tempfile
 from time import perf_counter
 
@@ -15,6 +16,18 @@ import numpy as np
 import pandas as pd
 
 from mmrec import MultiModalRecommender
+
+
+def peak_rss_mb() -> float | None:
+    """Return process peak RSS when the host exposes it (best-effort)."""
+    try:
+        import resource
+
+        value = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        # macOS reports bytes; Linux reports KiB.
+        return round(value / (1024 * 1024 if platform.system() == "Darwin" else 1024), 1)
+    except (ImportError, AttributeError):
+        return None
 
 
 def generate(users: int, items: int, rows: int) -> pd.DataFrame:
@@ -68,6 +81,9 @@ def main() -> None:
                     "recommend_1000_users_seconds": round(recommend_seconds, 3),
                     "recommend_throughput_users_per_sec": round(1000 / recommend_seconds, 1),
                     "recommendation_rows": len(result.data),
+                    "peak_rss_mb": peak_rss_mb(),
+                    "python": platform.python_version(),
+                    "platform": platform.platform(),
                     "models": sorted(recommender.models),
                     "leaderboard": recommender.leaderboard().to_dict(orient="records"),
                 },
