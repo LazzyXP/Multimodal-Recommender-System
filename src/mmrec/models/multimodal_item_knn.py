@@ -2,8 +2,8 @@
 
 Scoring defaults to an exact vectorized inner product (BLAS), which is optimal
 for exact recall. When ``use_ann=True`` and the optional ``faiss-cpu`` package
-is installed, a FAISS IndexFlatIP exact inner-product index is built. The legacy
-option name does not imply approximate retrieval or bounded catalog memory.
+is installed, ``ann_backend="flat"`` uses exact IndexFlatIP and
+``ann_backend="hnsw"`` enables approximate HNSW retrieval.
 """
 
 from __future__ import annotations
@@ -22,12 +22,29 @@ from mmrec.models.base import BaseRecommendationModel
 class MultiModalItemKNNModel(BaseRecommendationModel):
     name = "MultiModalItemKNN"
 
-    def __init__(self, columns, use_ann: bool = False, ann_topk: int = 100) -> None:
+    def __init__(
+        self,
+        columns,
+        use_ann: bool = False,
+        ann_topk: int = 100,
+        ann_backend: str = "flat",
+        ann_hnsw_m: int = 32,
+        ann_ef_search: int = 64,
+    ) -> None:
         super().__init__(columns)
         if ann_topk <= 0:
             raise ValueError("ann_topk must be positive.")
+        if ann_backend not in {"flat", "hnsw"}:
+            raise ValueError("ann_backend must be 'flat' or 'hnsw'.")
+        if ann_hnsw_m <= 0:
+            raise ValueError("ann_hnsw_m must be positive.")
+        if ann_ef_search <= 0:
+            raise ValueError("ann_ef_search must be positive.")
         self.use_ann = use_ann
         self.ann_topk = ann_topk
+        self.ann_backend = ann_backend
+        self.ann_hnsw_m = ann_hnsw_m
+        self.ann_ef_search = ann_ef_search
         self._ann_index: Any = None
         self.user_vectors: dict[Any, np.ndarray] = {}
 
@@ -76,12 +93,19 @@ class MultiModalItemKNNModel(BaseRecommendationModel):
         try:
             import faiss  # type: ignore[import-not-found]
 
-            index = faiss.IndexFlatIP(self.feature_matrix.shape[1])
+            if self.ann_backend == "hnsw":
+                index = faiss.IndexHNSWFlat(
+                    self.feature_matrix.shape[1], self.ann_hnsw_m, faiss.METRIC_INNER_PRODUCT
+                )
+                index.hnsw.efSearch = max(self.ann_ef_search, self.ann_topk)
+            else:
+                index = faiss.IndexFlatIP(self.feature_matrix.shape[1])
             index.add(self.feature_matrix.astype(np.float32))
             return index
         except ImportError:
             warnings.warn(
-                "use_ann=True requested but faiss-cpu is unavailable; falling back to "
+                f"use_ann=True with ann_backend={self.ann_backend!r} requested but faiss-cpu "
+                "is unavailable; falling back to "
                 "NumPy exact inner-product scoring.",
                 UserWarning,
                 stacklevel=2,

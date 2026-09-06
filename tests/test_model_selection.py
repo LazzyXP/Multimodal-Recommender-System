@@ -54,6 +54,15 @@ def test_multimodal_ann_topk_must_be_positive() -> None:
         MultiModalItemKNNModel(ColumnConfig(), use_ann=True, ann_topk=0)
 
 
+def test_multimodal_ann_backend_validation() -> None:
+    with pytest.raises(ValueError, match="ann_backend"):
+        MultiModalItemKNNModel(ColumnConfig(), use_ann=True, ann_backend="ivf")
+    model = MultiModalItemKNNModel(
+        ColumnConfig(), use_ann=True, ann_backend="hnsw", ann_hnsw_m=16, ann_ef_search=32
+    )
+    assert (model.ann_backend, model.ann_hnsw_m, model.ann_ef_search) == ("hnsw", 16, 32)
+
+
 def test_model_catalog_exposes_families_and_references() -> None:
     predictor = MultiModalRecommender()
     catalog = predictor.model_catalog().set_index("name")

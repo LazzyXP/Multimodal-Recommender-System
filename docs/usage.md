@@ -170,9 +170,10 @@ recommender.fit(
 `save()` 默认保留最近 3 个 generation；可通过 `max_generations` 调整保留数。generation
 包含模型和打包的历史索引，旧 generation 会在写锁内清理。
 
-安装 `[faiss]` extra 后，`MultiModalItemKNN` 可设置 `use_ann=True` 使用 FAISS
-`IndexFlatIP` 精确内积检索。该参数名沿用早期接口，当前并未实现 HNSW/IVF 近似索引；
-未安装 FAISS 时回退到 NumPy 内积。
+安装 `[faiss]` extra 后，`MultiModalItemKNN` 可设置 `use_ann=True` 使用 FAISS。
+默认 `ann_backend="flat"` 是 `IndexFlatIP` 精确内积检索；大目录可以设置
+`ann_backend="hnsw"`，并调节 `ann_hnsw_m` 与 `ann_ef_search`。未安装 FAISS 时两种配置都会
+回退到 NumPy 内积。
 
 ## 完整多模态配置示例
 

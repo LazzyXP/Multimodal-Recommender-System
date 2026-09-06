@@ -15,9 +15,9 @@
 | 已完成 | `predictor.save()` 的多文件一致性 | generation 目录完整写入后原子替换 `.CURRENT` 指针；兼容旧根目录 artifact，并保留上一代回退和写锁 |
 | 已完成 | CI 显式导入 torch 后运行图模型测试 | CPU smoke 会打印 torch 版本/CUDA 状态，缺 torch 时在测试前失败 |
 | 已完成 | benchmark 支持真实数据和多随机种子 | JSON 记录 Recall/NDCG、耗时、峰值 RSS、平台和每次运行的均值/标准差 |
-| 中 | `MultiModalItemKNN` 使用 `IndexFlatIP`，并保留完整特征与评分数组 | 已覆盖 `ann_topk` 参数校验、已见物品过滤和批量/单用户结果一致性；候选截断的规模上界与 HNSW/IVF 仍待补齐 |
+| 中 | `MultiModalItemKNN` 支持 `IndexFlatIP` 精确检索和可选 HNSW | 已覆盖 `ann_topk`/后端参数校验、已见物品过滤和批量/单用户结果一致性；候选截断规模上界和 IVF 仍待补齐 |
 
-当前 FAISS 路径是精确的 `IndexFlatIP`，并非近似 ANN；不同模型的 embedding 不同，也不能单独证明论文实现正确。
+当前 FAISS 默认路径是精确的 `IndexFlatIP`，`ann_backend="hnsw"` 才是近似 ANN；不同模型的 embedding 不同，也不能单独证明论文实现正确。
 服务器环境可用于后续 GPU 和真实数据 benchmark，但本地验收不把服务器可用性当作已完成证据。
 
 ### 自动选模工作流记录
@@ -65,8 +65,8 @@
 2. **meta-learner 堆叠**：非负逻辑回归在 validation 上监督学习 RRF 权重；最终指标使用独立
    test 切分，但仍不是多折 OOF stacking。
 3. **简化 TPE HPO**：`hpo.TpeSearch` 无外部依赖的 TPE 式加权采样 + successive-halving。
-4. **FAISS 精确索引**：`[faiss]` extra + `MultiModalItemKNN(use_ann=True)` 使用 `IndexFlatIP`，
-   缺依赖时自动回退 NumPy 精确内积；HNSW/IVF 等近似索引仍未实现。
+4. **FAISS 检索**：`[faiss]` extra + `MultiModalItemKNN(use_ann=True)` 默认使用 `IndexFlatIP`，
+   也支持 HNSW；缺依赖时自动回退 NumPy 精确内积，IVF 等其他索引仍未实现。
 5. **修复默认学习率导致的图模型欠拟合**：`lr 1e-3 → 1e-2`、`epochs 20 → 50`（修复前 BPR
    损失停在 log2≈0.693 附近不降，修复后 0.684 → 0.287，已验证梯度正常流动）。
 
