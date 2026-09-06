@@ -30,3 +30,13 @@ def test_tpe_suggest_covers_full_space_without_history() -> None:
     sampler = TpeSearch(space, random_state=2, warmup=3)
     seen_layers = {sampler.suggest()["layers"] for _ in range(20)}
     assert seen_layers == set(space["layers"])
+
+
+def test_tpe_deduplicates_until_search_space_is_exhausted() -> None:
+    sampler = TpeSearch({"a": [1, 2], "b": ["x", "y"]}, random_state=3, warmup=1)
+    configs = []
+    for _ in range(4):
+        config = sampler.suggest()
+        configs.append(tuple(sorted(config.items())))
+        sampler.observe(config, 1.0)
+    assert len(set(configs)) == 4

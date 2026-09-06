@@ -11,6 +11,7 @@ rather than an approximation.
 from __future__ import annotations
 
 from collections import Counter
+from itertools import product
 from typing import Any
 
 import numpy as np
@@ -35,12 +36,29 @@ class TpeSearch:
         self._history: list[tuple[dict[str, Any], float]] = []
 
     def suggest(self) -> dict[str, Any]:
-        if len(self._history) < self.warmup:
-            return self._random_config()
-        return self._tpe_config()
+        seen = {self._config_key(config) for config, _ in self._history}
+        total = int(np.prod([len(choices) for choices in self.space.values()]))
+        for _ in range(max(8, total)):
+            config = (
+                self._random_config()
+                if len(self._history) < self.warmup
+                else self._tpe_config()
+            )
+            if self._config_key(config) not in seen or len(seen) >= total:
+                return config
+        for values in product(*self.space.values()):
+            config = dict(zip(self.space, values, strict=True))
+            if self._config_key(config) not in seen:
+                return config
+        return self._random_config()
 
     def observe(self, config: dict[str, Any], score: float) -> None:
         self._history.append((dict(config), float(score)))
+
+    @staticmethod
+    def _config_key(config: dict[str, Any]) -> tuple[tuple[str, str], ...]:
+        """Create a stable key for discrete values, including array-like values."""
+        return tuple(sorted((parameter, repr(value)) for parameter, value in config.items()))
 
     def _random_config(self) -> dict[str, Any]:
         return {
