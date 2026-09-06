@@ -117,6 +117,14 @@ def test_save_reclaims_stale_writer_lock(fitted: MultiModalRecommender, tmp_path
     assert not (model_path / ".save.lock").exists()
 
 
+def test_save_limits_generation_retention(fitted: MultiModalRecommender, tmp_path) -> None:
+    model_path = tmp_path / "model"
+    for _ in range(4):
+        fitted.save(model_path, max_generations=2)
+    assert len(list(model_path.glob(".generation-*"))) == 2
+    assert not (model_path / ".save.lock").exists()
+
+
 def test_validates_declared_modalities(interactions: pd.DataFrame) -> None:
     items = pd.DataFrame({"item_id": ["a", "b", "c", "d", "e"], "title": ["a"] * 5})
     predictor = MultiModalRecommender()

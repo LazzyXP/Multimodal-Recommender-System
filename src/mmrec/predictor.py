@@ -1357,8 +1357,11 @@ class MultiModalRecommender:
         path: str | Path,
         include_history_index: bool = False,
         best_only: bool = False,
+        max_generations: int = 3,
     ) -> Path:
         """Persist an artifact while serializing concurrent writers per directory."""
+        if max_generations <= 0:
+            raise ValueError("max_generations must be positive.")
         target = Path(path)
         target.mkdir(parents=True, exist_ok=True)
         lock = target / ".save.lock"
@@ -1383,13 +1386,13 @@ class MultiModalRecommender:
                 sleep(0.05)
         try:
             result = self._save_unlocked(path, include_history_index, best_only)
-            self._publish_generation(result)
+            self._publish_generation(result, max_generations)
             return result
         finally:
             lock.unlink(missing_ok=True)
 
     @staticmethod
-    def _publish_generation(target: Path) -> None:
+    def _publish_generation(target: Path, max_generations: int) -> None:
         """Publish a complete artifact directory by atomically swapping a pointer."""
         generation_name = f".generation-{uuid.uuid4().hex}"
         generation = target / generation_name
@@ -1403,6 +1406,13 @@ class MultiModalRecommender:
         temporary = target / f".CURRENT.{uuid.uuid4().hex}.tmp"
         temporary.write_text(generation_name, encoding="utf-8")
         temporary.replace(pointer)
+        generations = sorted(
+            (candidate for candidate in target.glob(".generation-*") if candidate.is_dir()),
+            key=lambda candidate: candidate.stat().st_mtime_ns,
+            reverse=True,
+        )
+        for obsolete in generations[max_generations:]:
+            shutil.rmtree(obsolete)
 
     def _save_unlocked(
         self,
