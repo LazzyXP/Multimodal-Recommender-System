@@ -52,6 +52,10 @@ def _top_k_items(
 
 class BaseRecommendationModel(ABC):
     name: str
+    # Upper bound for a batched (users x catalog) score matrix. The predictor
+    # can override this per run; keeping a conservative default prevents a
+    # recommendation call from competing with model tensors for GPU memory.
+    max_score_bytes: int = 64 * 1024 * 1024
 
     def __init__(self, columns: ColumnConfig) -> None:
         self.columns = columns
@@ -117,7 +121,7 @@ class BaseRecommendationModel(ABC):
 
         # Batched scoring runs in user chunks so the (n_users, n_items) score
         # matrix stays memory-bounded on large catalogs (~256 MiB per chunk).
-        chunk = max(1, 64_000_000 // max(1, len(self.items)))
+        chunk = max(1, self.max_score_bytes // max(1, len(self.items) * 4))
         if users and self.score_all_users(users[:1], histories) is not None:
             frames: list[pd.DataFrame] = []
             for start in range(0, len(users), chunk):

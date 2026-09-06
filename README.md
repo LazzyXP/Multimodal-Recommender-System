@@ -103,6 +103,7 @@ recommender = MultiModalRecommender(
     sample_interactions=1_000_000,
     scan_batch_size=262_144,
     inference_batch_size=10_000,
+    max_inference_score_mb=64,
     history_partitions=256,
     max_catalog_items=2_000_000,
     max_sample_history_per_user=200,
@@ -180,6 +181,10 @@ checkpoint 分别保存候选和已完成的重训阶段，可在追加预算后
 可用 `set_model_best("ItemCF")` 手动指定已训练模型。`save(best_only=True)` 仅保存选中的
 模型；选中融合时保留全部依赖。`predict()` 对融合模型返回基于每个用户传入候选集合
 计算的 RRF 分数，分数随候选集合变化，不是概率。
+
+推荐阶段默认把每个模型的临时 score matrix 限制在 64 MiB；可通过
+`max_inference_score_mb` 调整。降低该值可避免大 catalog 或 GPU 参数占用导致 OOM，
+代价是更小的用户批次和较低吞吐。
 
 当前融合权重和融合模型选择共享单次验证集，验证分数可能乐观；独立测试集只做最终报告。
 验证集没有可用分数时发出 warning，并回退到第一个成功候选，不会使用测试分数选模。

@@ -84,6 +84,7 @@ class MultiModalRecommender:
         max_catalog_items: int = 2_000_000,
         max_sample_history_per_user: int = 200,
         eval_metric: str | None = None,
+        max_inference_score_mb: int = 64,
     ) -> None:
         self.columns = ColumnConfig(user_id, item_id, timestamp, label)
         self.eval_metrics = eval_metrics or ["recall@10", "ndcg@10", "mrr@10"]
@@ -96,6 +97,9 @@ class MultiModalRecommender:
         # Validate metric syntax at construction time.
         max_metric_cutoff(self.eval_metrics)
         self.random_state = random_state
+        if max_inference_score_mb <= 0:
+            raise ValueError("max_inference_score_mb must be positive.")
+        self.max_inference_score_mb = max_inference_score_mb
         self.cache_dir = Path(cache_dir)
         self.execution = ExecutionConfig(
             mode=execution_mode,
@@ -620,6 +624,7 @@ class MultiModalRecommender:
                 for row in fit_rows
             },
             ensemble_weights=self.ensemble_weights,
+            max_inference_score_mb=self.max_inference_score_mb,
         )
 
         dataset_summary = {
@@ -644,6 +649,7 @@ class MultiModalRecommender:
             "eval_metric": self.eval_metric,
             "refit_full": refit_full,
             "external_test": test_data is not None,
+            "max_inference_score_mb": self.max_inference_score_mb,
         }
         protocol = {
             "global_temporal": "global chronological holdout",
@@ -742,6 +748,7 @@ class MultiModalRecommender:
         counts would leak the val/test interactions into the rankings).
         """
         model = self.registry.create(model_name, self.columns, **config)
+        model.max_score_bytes = self.max_inference_score_mb * 1024 * 1024
         if use_full_counts and model_name == "Popularity" and full_item_counts is not None:
             model.fit_from_counts(  # type: ignore[attr-defined]
                 full_item_counts, interactions, dataset

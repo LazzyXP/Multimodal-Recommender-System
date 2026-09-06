@@ -32,6 +32,7 @@ class RunConfig:
     execution_mode: str = "auto"
     model_configs: dict[str, dict[str, Any]] = field(default_factory=dict)
     ensemble_weights: dict[str, float] = field(default_factory=dict)
+    max_inference_score_mb: int = 64
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
