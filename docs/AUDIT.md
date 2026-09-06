@@ -15,7 +15,7 @@
 | 已完成 | `predictor.save()` 的多文件一致性 | generation 目录完整写入后原子替换 `.CURRENT` 指针；兼容旧根目录 artifact，并保留上一代回退和写锁 |
 | 已完成 | CI 显式导入 torch 后运行图模型测试 | CPU smoke 会打印 torch 版本/CUDA 状态，缺 torch 时在测试前失败 |
 | 已完成 | benchmark 支持真实数据和多随机种子 | JSON 记录 Recall/NDCG、耗时、峰值 RSS、平台和每次运行的均值/标准差 |
-| 中 | `MultiModalItemKNN` 支持 `IndexFlatIP`、HNSW、IVF 和 IVF-PQ | 已覆盖 `ann_topk`/后端参数校验、已见物品过滤和批量/单用户结果一致性；真实大目录召回率/延迟仍待 benchmark |
+| 中 | `MultiModalItemKNN` 支持 `IndexFlatIP`、HNSW、IVF 和 IVF-PQ | 已覆盖 `ann_topk`/后端参数校验、已见物品过滤和批量/单用户结果一致性；`benchmarks/benchmark_retrieval.py` 可测大目录延迟/内存，真实召回率仍待服务器数据 |
 
 当前 FAISS 默认路径是精确的 `IndexFlatIP`，`ann_backend="hnsw"`/`"ivf"`/`"ivfpq"` 才是近似或压缩 ANN；不同模型的 embedding 不同，也不能单独证明论文实现正确。
 服务器环境可用于后续 GPU 和真实数据 benchmark，但本地验收不把服务器可用性当作已完成证据。
@@ -46,7 +46,7 @@
 
 ## 二、关键验证证据
 
-- **测试**：77 个用例全部通过（模型选择、流式、存储、torch 模型、指标数值正确性、
+- **测试**：79 个用例全部通过（模型选择、流式、存储、torch 模型、指标数值正确性、
   TPE、集成、HPO、checkpoint、manifest）。`ruff` 全绿。
 - **模型保真度**：8 个 torch 模型两两 item embedding **全部不同（28/28 对）**，证明
   不是「共享基类 + 开关」的别名，而是独立的图构建/传播/损失。

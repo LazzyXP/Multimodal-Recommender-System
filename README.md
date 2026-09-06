@@ -134,6 +134,13 @@ uv build
 python benchmarks/benchmark.py --input data/interactions.parquet --seeds 7,8,9
 ```
 
+检索后端可用独立 benchmark 对比（安装 `[faiss]` 后可启用 HNSW/IVF/IVF-PQ）：
+
+```bash
+uv run python benchmarks/benchmark_retrieval.py --items 100000 --users 1000 \
+  --backend flat,hnsw,ivf,ivfpq
+```
+
 输出 JSON 包含每个 seed 的数据规模、模型 leaderboard、吞吐、峰值 RSS、Python 和平台信息，
 以及多 seed 的均值/标准差，便于固定环境对比。
 发布包的构建、安装与验证流程见 [发布说明](docs/releasing.md)。
