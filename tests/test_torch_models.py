@@ -3,12 +3,13 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 import pytest
-import torch
 
 from mmrec import MultiModalRecommender
 from mmrec.config import ColumnConfig
 from mmrec.models import LightGCNModel, torch_available
-from mmrec.models.graph import common
+
+torch = pytest.importorskip("torch")
+common = pytest.importorskip("mmrec.models.graph.common")
 
 
 def test_torch_models_are_catalogued_without_importing_torch() -> None:
@@ -183,8 +184,6 @@ def test_negative_sampler_resolves_collisions_and_rejects_full_catalog() -> None
     negative = common.sample_negatives(torch.tensor([0]), 3, mask, generator)
     assert int(negative[0]) == 2
 
-    full_mask = common.build_positive_mask(
-        torch.tensor([0, 0, 0]), torch.tensor([0, 1, 2]), 1, 3
-    )
+    full_mask = common.build_positive_mask(torch.tensor([0, 0, 0]), torch.tensor([0, 1, 2]), 1, 3)
     with pytest.raises(ValueError, match="full catalog"):
         common.sample_negatives(torch.tensor([0]), 3, full_mask, generator)

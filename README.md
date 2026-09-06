@@ -30,16 +30,29 @@
 
 ## 安装
 
+**发布状态：尚未发布到 PyPI。** 当前不能使用 `pip install multimodal-recommender`
+从 PyPI 安装；此前文档把计划中的发布方式写成已可用，这是错误的。
+目前需要 Python 3.11+ 和 Git，可直接从 GitHub 安装：
+
 ```bash
+python -m pip install "git+https://github.com/LazzyXP/Multimodal-Recommender-System.git@main"
+# 可选 PyTorch 图模型
+python -m pip install "multimodal-recommender[torch] @ git+https://github.com/LazzyXP/Multimodal-Recommender-System.git@main"
+```
+
+`main` 会更新；需要复现时，将 `@main` 换成具体提交 SHA。
+也可以克隆后安装：
+
+```bash
+git clone https://github.com/LazzyXP/Multimodal-Recommender-System.git
+cd Multimodal-Recommender-System
+python -m pip install .
+# 开发环境（需先安装 uv）
 uv sync --group dev
 ```
 
-从 PyPI 安装发布包时使用：
-
-```bash
-pip install multimodal-recommender
-pip install "multimodal-recommender[torch]"  # optional graph model layer
-```
+首次 PyPI 发布还需要维护者配置账号和 Trusted Publisher，具体步骤见
+[发布说明](docs/releasing.md)。GitHub Release 或构建产物不等于已经发布到 PyPI。
 
 The core wheel has no platform-specific native dependency beyond NumPy, pandas and
 PyArrow. The optional graph layer uses the official PyTorch wheel for the current
@@ -289,5 +302,6 @@ uv run python benchmarks/streaming_smoke.py --rows 1000000
 uv build
 ```
 
-构建结果位于 `dist/`。正式发布前应在干净虚拟环境中安装 wheel 并运行导入检查，再使用
-`uv publish` 上传；发布凭据不应写入仓库或配置文件。
+构建结果位于 `dist/`。`Package and publish` 工作流会验证源码包和 wheel 的安装、
+训练、推荐及保存加载；仅在发布版本号匹配的 GitHub Release 时尝试上传 PyPI。
+首次发布配置与安装验收步骤见 [发布说明](docs/releasing.md)。

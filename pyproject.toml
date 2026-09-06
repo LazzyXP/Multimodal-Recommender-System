@@ -22,6 +22,11 @@ dependencies = [
     "pyarrow>=14",
 ]
 
+[project.urls]
+Repository = "https://github.com/LazzyXP/Multimodal-Recommender-System"
+Issues = "https://github.com/LazzyXP/Multimodal-Recommender-System/issues"
+Documentation = "https://github.com/LazzyXP/Multimodal-Recommender-System/blob/main/README.md"
+
 [project.optional-dependencies]
 torch = ["torch>=2.2"]
 faiss = ["faiss-cpu>=1.8"]
