@@ -14,8 +14,9 @@ git clone https://github.com/LazzyXP/Multimodal-Recommender-System.git
 cd Multimodal-Recommender-System
 ```
 
-The project root `uv.toml` uses the Aliyun PyPI mirror by default. The package
-follows the same separation used by AutoGluon: the recommender wheel is
+The project root uses the official PyPI index by default for lockfile
+reproducibility. In mainland China, override it with `UV_INDEX_URL` or a uv
+`--default-index` argument if needed. The package follows the same separation used by AutoGluon: the recommender wheel is
 platform-neutral, and the optional deep-learning runtime is selected at install time.
 CUDA is not bundled into `multimodal-recommender` and should not be installed on a Mac.
 
