@@ -176,6 +176,11 @@ recommender.fit(
 其中 `ivfpq` 要求特征维度能被 `ann_pq_m` 整除。未安装 FAISS 时四种配置都会回退到
 NumPy 内积。
 
+HNSW/IVF/IVF-PQ 是近似或压缩检索：`ann_topk` 决定每个用户保留的候选数，IVF 的
+`ann_nprobe` 越大通常召回越高但延迟也越高，PQ 还会引入量化误差。正式上线前应使用
+`benchmarks/benchmark_retrieval.py` 在目标目录上比较 `recall_at_20_vs_exact`、延迟和内存，
+不要直接用小数据集的默认参数推断大目录效果。
+
 ## 完整多模态配置示例
 
 ```python

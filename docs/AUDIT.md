@@ -19,6 +19,9 @@
 
 当前 FAISS 默认路径是精确的 `IndexFlatIP`，`ann_backend="hnsw"`/`"ivf"`/`"ivfpq"` 才是近似或压缩 ANN；不同模型的 embedding 不同，也不能单独证明论文实现正确。
 服务器环境可用于后续 GPU 和真实数据 benchmark，但本地验收不把服务器可用性当作已完成证据。
+本地合成目录 benchmark（1000 items / 50 users / 2 seeds）显示 HNSW、IVF、IVF-PQ 的
+`recall_at_20_vs_exact` 分别约为 0.902、0.677、0.523；这些数字只用于证明测量链路，
+不代表真实业务数据的最终质量。
 截至本次核验，GitHub 最新 Published Release 仍为 `v0.1.0`，PyPI 最新版本也仍为 `0.1.0`；
 `v0.1.2` tag 已推送，但尚未创建 Published Release，因此不能把 0.1.2 视为已发布。
 
