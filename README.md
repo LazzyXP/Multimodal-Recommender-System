@@ -131,10 +131,11 @@ uv build
 也可对真实交互表运行：
 
 ```bash
-python benchmarks/benchmark.py --input data/interactions.parquet --seed 7
+python benchmarks/benchmark.py --input data/interactions.parquet --seeds 7,8,9
 ```
 
-输出 JSON 包含数据规模、模型 leaderboard、吞吐、峰值 RSS、Python 和平台信息，便于固定环境对比。
+输出 JSON 包含每个 seed 的数据规模、模型 leaderboard、吞吐、峰值 RSS、Python 和平台信息，
+以及多 seed 的均值/标准差，便于固定环境对比。
 发布包的构建、安装与验证流程见 [发布说明](docs/releasing.md)。
 
 发现问题可提交 [Issue](https://github.com/LazzyXP/Multimodal-Recommender-System/issues)，
