@@ -82,7 +82,7 @@
 - stacking 只使用单次 validation，缺少多折 OOF、bagging、置信区间和防泄漏的层级评估；
 - `time_limit` 对内置模型是 best-effort deadline，对自定义模型不能硬中断；
 - checkpoint 已使用表内容指纹，但仍以 pickle 为主，缺少跨版本 schema migration 和安全 artifact 格式。
-- generation 默认保留最近 3 代，可通过 `save(max_generations=...)` 调整；旧代清理发生在写锁内。跨进程长时间读取旧代时仍需由部署方避免与清理并发，完整读锁协议尚未实现。
+- generation 默认保留最近 3 代，可通过 `save(max_generations=...)` 调整；旧代清理发生在写锁内，`load()` 会等待当前写入完成。跨进程已打开旧文件的长时间读取仍需由部署方避免与清理并发。
 
 **（3）多模态与规模：**
 - item 特征仍是整体进内存的 dense 矩阵，尚无 mmap、分片编码或完整 ANN 训练路径；

@@ -1476,6 +1476,18 @@ class MultiModalRecommender:
     @classmethod
     def load(cls, path: str | Path) -> MultiModalRecommender:
         root = Path(path)
+        lock = root / ".save.lock"
+        deadline = perf_counter() + 30.0
+        while lock.exists():
+            try:
+                owner = int(lock.read_text(encoding="ascii"))
+                os.kill(owner, 0)
+            except (OSError, ValueError):
+                lock.unlink(missing_ok=True)
+                continue
+            if perf_counter() >= deadline:
+                raise TimeoutError(f"Timed out waiting to load model from {root}")
+            sleep(0.05)
         candidates: list[tuple[Path, Path]] = []
         pointer = root / ".CURRENT"
         if pointer.exists():
