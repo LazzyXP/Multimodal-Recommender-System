@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -95,6 +96,23 @@ def test_faiss_backends_build_when_optional_dependency_is_available(
         },
     )
     assert predictor.recommend(users=["u1"], k=2, include_ensemble=False).data.shape[0] == 2
+
+
+def test_faiss_backend_is_used_by_batched_recommendation() -> None:
+    pytest.importorskip("faiss")
+    interactions, items = _data()
+    predictor = MultiModalRecommender(eval_metrics=["recall@3"])
+    predictor.fit(
+        interactions,
+        items=items,
+        modalities={"item": {"embedding": "image_embedding"}},
+        models="MultiModalItemKNN",
+        model_configs={"MultiModalItemKNN": {"use_ann": True, "ann_backend": "hnsw"}},
+    )
+    model = predictor.models["MultiModalItemKNN"]
+    scores = model.score_all_users(["u1", "u2"], model.seen_by_user)
+    assert scores is not None
+    assert np.count_nonzero(scores[0]) <= model.ann_topk
 
 
 def test_model_catalog_exposes_families_and_references() -> None:

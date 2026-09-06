@@ -215,6 +215,15 @@ class MultiModalItemKNNModel(BaseRecommendationModel):
             if norm == 0:
                 return None
             profiles.append(profile / norm)
+        if self._ann_index is not None:
+            scores = np.zeros((len(profiles), len(self.items)), dtype=np.float32)
+            values, indices = self._ann_index.search(
+                np.asarray(profiles, dtype=np.float32), self.ann_topk
+            )
+            valid = indices >= 0
+            rows = np.broadcast_to(np.arange(len(profiles))[:, None], indices.shape)
+            scores[rows[valid], indices[valid]] = values[valid]
+            return scores
         matrix = np.stack(profiles)  # (B, D)
         return (matrix @ self.feature_matrix.T).astype(np.float32)  # (B, N)
 
