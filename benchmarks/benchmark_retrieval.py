@@ -65,6 +65,25 @@ def run_once(items: int, users: int, dimensions: int, seed: int, backend: str) -
     started = perf_counter()
     result = model.recommend(user_ids, k=20)
     recommend_seconds = perf_counter() - started
+    exact_recalls: list[float] = []
+    for user_id in user_ids:
+        history = set(interactions.loc[interactions["user_id"] == user_id, "item_id"])
+        profile = np.mean(
+            [model.item_vectors[item_id] for item_id in history], axis=0
+        )
+        norm = np.linalg.norm(profile)
+        if norm == 0:
+            continue
+        exact_scores = model.feature_matrix @ (profile / norm)
+        for item_id in history:
+            index = model.item_indices.get(item_id)
+            if index is not None:
+                exact_scores[index] = -np.inf
+        limit = min(20, len(model.items))
+        exact_indices = np.argpartition(-exact_scores, limit - 1)[:limit]
+        exact_items = {model.items[index] for index in exact_indices}
+        observed = set(result.loc[result["user_id"] == user_id, "item_id"])
+        exact_recalls.append(len(exact_items & observed) / limit)
     return {
         "backend": backend,
         "items": items,
@@ -75,6 +94,7 @@ def run_once(items: int, users: int, dimensions: int, seed: int, backend: str) -
         "recommend_seconds": round(recommend_seconds, 3),
         "users_per_second": round(users / recommend_seconds, 1),
         "recommendation_rows": len(result),
+        "recall_at_20_vs_exact": round(float(np.mean(exact_recalls)), 4),
         "peak_rss_mb": peak_rss_mb(),
         "python": platform.python_version(),
         "platform": platform.platform(),
