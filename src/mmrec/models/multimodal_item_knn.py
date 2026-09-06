@@ -63,6 +63,7 @@ class MultiModalItemKNNModel(BaseRecommendationModel):
         self.ann_nprobe = ann_nprobe
         self.ann_pq_m = ann_pq_m
         self.ann_pq_nbits = ann_pq_nbits
+        self.effective_ann_pq_nbits = ann_pq_nbits
         self._ann_index: Any = None
         self.user_vectors: dict[Any, np.ndarray] = {}
 
@@ -126,6 +127,15 @@ class MultiModalItemKNNModel(BaseRecommendationModel):
                             "feature dimension must be divisible by ann_pq_m for ivfpq."
                         )
                     effective_nbits = min(self.ann_pq_nbits, max(1, int(np.log2(len(vectors)))))
+                    self.effective_ann_pq_nbits = effective_nbits
+                    if effective_nbits < self.ann_pq_nbits:
+                        warnings.warn(
+                            f"ivfpq reduced ann_pq_nbits from {self.ann_pq_nbits} to "
+                            f"{effective_nbits} because the catalog has only {len(vectors)} "
+                            "training vectors.",
+                            UserWarning,
+                            stacklevel=2,
+                        )
                     index = faiss.IndexIVFPQ(
                         quantizer,
                         self.feature_matrix.shape[1],
