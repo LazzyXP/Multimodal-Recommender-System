@@ -86,6 +86,27 @@ def test_recommend_to_parquet_accepts_user_file(tmp_path: Path) -> None:
     assert set(recommendations["model"]) == {"Popularity", "ItemCF", "RankFusion"}
 
 
+def test_batched_parquet_recommendations_match_in_memory_results(tmp_path: Path) -> None:
+    source = tmp_path / "interactions.parquet"
+    output = tmp_path / "recommendations.parquet"
+    _large_fixture().to_parquet(source, index=False)
+    predictor = MultiModalRecommender(
+        eval_metrics=["recall@3"],
+        cache_dir=tmp_path / "cache",
+        execution_mode="streaming",
+        sample_interactions=30,
+    ).fit(source, models=["Popularity", "ItemCF"])
+    users = ["u0", "u1", "u2"]
+    expected = predictor.recommend(users, k=3, models="all").data
+    predictor.recommend_to_parquet(users, output, k=3, models="all", batch_size=1)
+    actual = pd.read_parquet(output)
+    pd.testing.assert_frame_equal(
+        expected.sort_values(expected.columns.tolist()).reset_index(drop=True),
+        actual.sort_values(actual.columns.tolist()).reset_index(drop=True),
+        check_dtype=False,
+    )
+
+
 def test_recommend_to_parquet_rejects_non_positive_batch_size(tmp_path: Path) -> None:
     source = tmp_path / "interactions.parquet"
     _large_fixture().to_parquet(source, index=False)
