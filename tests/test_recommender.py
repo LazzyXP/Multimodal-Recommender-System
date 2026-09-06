@@ -92,6 +92,17 @@ def test_load_rejects_mismatched_metadata(fitted: MultiModalRecommender, tmp_pat
         MultiModalRecommender.load(model_path)
 
 
+def test_load_recovers_previous_complete_generation(
+    fitted: MultiModalRecommender, tmp_path
+) -> None:
+    model_path = fitted.save(tmp_path / "model")
+    fitted.save(model_path)
+    artifact = model_path / "recommender.pkl"
+    artifact.write_bytes(artifact.read_bytes() + b"interrupted-write")
+    restored = MultiModalRecommender.load(model_path)
+    assert restored.models.keys() == fitted.models.keys()
+
+
 def test_validates_declared_modalities(interactions: pd.DataFrame) -> None:
     items = pd.DataFrame({"item_id": ["a", "b", "c", "d", "e"], "title": ["a"] * 5})
     predictor = MultiModalRecommender()

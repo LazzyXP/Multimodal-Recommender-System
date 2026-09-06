@@ -1363,8 +1363,14 @@ class MultiModalRecommender:
         original_history_index = self.history_index
         bundled_history_index: str | None = None
         artifact_path = target / "recommender.pkl"
+        metadata_path = target / "metadata.json"
+        previous_artifact = target / ".recommender.pkl.previous"
+        previous_metadata = target / ".metadata.json.previous"
         temporary_artifact = target / f".recommender.pkl.{uuid.uuid4().hex}.tmp"
         try:
+            if artifact_path.exists() and metadata_path.exists():
+                shutil.copy2(artifact_path, previous_artifact)
+                shutil.copy2(metadata_path, previous_metadata)
             if include_history_index and self.history_index:
                 source_index = Path(self.history_index)
                 if not source_index.exists():
@@ -1397,7 +1403,6 @@ class MultiModalRecommender:
                 original_history_index if self.is_streaming and not bundled_history_index else None
             ),
         }
-        metadata_path = target / "metadata.json"
         temporary_metadata = target / f".metadata.json.{uuid.uuid4().hex}.tmp"
         temporary_metadata.write_text(
             json.dumps(metadata, indent=2, sort_keys=True, default=str), encoding="utf-8"
@@ -1407,48 +1412,57 @@ class MultiModalRecommender:
 
     @classmethod
     def load(cls, path: str | Path) -> MultiModalRecommender:
-        source = Path(path) / "recommender.pkl"
-        if not source.exists():
-            raise FileNotFoundError(f"Saved recommender not found: {source}")
-        metadata_path = source.parent / "metadata.json"
-        metadata: dict[str, Any] | None = None
-        if metadata_path.exists():
+        root = Path(path)
+        candidates = [(root / "recommender.pkl", root / "metadata.json")]
+        previous = (root / ".recommender.pkl.previous", root / ".metadata.json.previous")
+        if all(candidate.exists() for candidate in previous):
+            candidates.append(previous)
+        failures: list[Exception] = []
+        for source, metadata_path in candidates:
+            if not source.exists():
+                continue
             try:
-                metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
-                if not isinstance(metadata, dict):
-                    raise ValueError("metadata must be a JSON object")
-                if metadata.get("format_version", 1) > 2:
-                    raise ValueError(
-                        f"Unsupported model metadata format: {metadata['format_version']}"
-                    )
-                expected_hash = metadata.get("artifact_sha256")
-            except (OSError, ValueError) as exc:
-                raise ValueError(f"Invalid model metadata: {metadata_path}") from exc
-            if expected_hash and expected_hash != _sha256_file(source):
-                raise ValueError(
-                    "Saved recommender artifact failed its integrity check; the model may be "
-                    "corrupted or was modified after saving."
-                )
-        with source.open("rb") as handle:
-            value = pickle.load(handle)  # noqa: S301 - persisted models must come from trusted runs.
-        if not isinstance(value, cls):
-            raise TypeError(f"The saved object is not a {cls.__name__}.")
-        if metadata is not None:
-            declared_models = metadata.get("models")
-            if declared_models is not None and set(declared_models) != set(value.models):
-                raise ValueError("Saved model metadata does not match the artifact model list.")
-            declared_best = metadata.get("model_best")
-            if declared_best is not None and declared_best != value.model_best:
-                raise ValueError("Saved model metadata does not match the selected best model.")
-        if not hasattr(value, "model_best"):
-            value.model_best = next(iter(value.models), None)
-            value.eval_metric = value.eval_metrics[0]
-            value.validation_report = None
-            value._deployment_histories = None
-            value._validation_histories = {}
-        if value.history_index and not Path(value.history_index).is_absolute():
-            value.history_index = str((source.parent / value.history_index).resolve())
-        return value
+                metadata: dict[str, Any] | None = None
+                if metadata_path.exists():
+                    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+                    if not isinstance(metadata, dict):
+                        raise ValueError("metadata must be a JSON object")
+                    if metadata.get("format_version", 1) > 2:
+                        raise ValueError(
+                            f"Unsupported model metadata format: {metadata['format_version']}"
+                        )
+                    expected_hash = metadata.get("artifact_sha256")
+                    if expected_hash and expected_hash != _sha256_file(source):
+                        raise ValueError("Saved recommender artifact failed its integrity check.")
+                with source.open("rb") as handle:
+                    value = pickle.load(handle)  # noqa: S301 - trusted local artifact.
+                if not isinstance(value, cls):
+                    raise TypeError(f"The saved object is not a {cls.__name__}.")
+                if metadata is not None:
+                    declared_models = metadata.get("models")
+                    if declared_models is not None and set(declared_models) != set(value.models):
+                        raise ValueError(
+                            "Saved model metadata does not match the artifact model list."
+                        )
+                    declared_best = metadata.get("model_best")
+                    if declared_best is not None and declared_best != value.model_best:
+                        raise ValueError(
+                            "Saved model metadata does not match the selected best model."
+                        )
+                if not hasattr(value, "model_best"):
+                    value.model_best = next(iter(value.models), None)
+                    value.eval_metric = value.eval_metrics[0]
+                    value.validation_report = None
+                    value._deployment_histories = None
+                    value._validation_histories = {}
+                if value.history_index and not Path(value.history_index).is_absolute():
+                    value.history_index = str((source.parent / value.history_index).resolve())
+                return value
+            except (OSError, ValueError, TypeError, pickle.PickleError, EOFError) as exc:
+                failures.append(exc)
+        if not candidates or not failures:
+            raise FileNotFoundError(f"Saved recommender not found: {root / 'recommender.pkl'}")
+        raise ValueError(str(failures[-1])) from failures[-1]
 
     def _build_report(
         self,
