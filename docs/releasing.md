@@ -31,7 +31,7 @@ Official instructions: https://docs.pypi.org/trusted-publishers/creating-a-proje
    source distribution, and tests the wheel on Linux/macOS/Windows with Python 3.11 and 3.12.
    The installed-package smoke test runs outside the checkout and exercises training, recommendation,
    save/load and the CLI. Optional torch models have their own existing CI job.
-3. Create a GitHub Release with a matching tag, for example `v0.1.1`, targeting that tested commit.
+3. Create a GitHub Release with a matching tag, for example `v0.1.2`, targeting that tested commit.
    A plain push or manual workflow run only builds/tests; publishing requires a published Release.
 4. The workflow verifies the tag against package metadata and uploads the tested artifacts to PyPI.
    Review the `publish` job result; a successful GitHub Release alone is not evidence of a PyPI upload.
@@ -39,7 +39,7 @@ Official instructions: https://docs.pypi.org/trusted-publishers/creating-a-proje
 
    ```bash
    python -m venv /tmp/mmrec-pypi-check
-   /tmp/mmrec-pypi-check/bin/python -m pip install --index-url https://pypi.org/simple multimodal-recommender==0.1.1
+   /tmp/mmrec-pypi-check/bin/python -m pip install --index-url https://pypi.org/simple multimodal-recommender==0.1.2
    /tmp/mmrec-pypi-check/bin/python scripts/package_smoke.py
    /tmp/mmrec-pypi-check/bin/mmrec --help
    ```

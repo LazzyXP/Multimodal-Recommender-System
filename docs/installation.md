@@ -1,7 +1,13 @@
 # Installation Matrix
 
-**Not yet published to PyPI.** Clone the repository and run the commands below
-from its root. A bare package-name install is not currently available.
+**PyPI provides version 0.1.0.** For a reproducible stable installation, run:
+
+```bash
+python -m pip install "multimodal-recommender==0.1.0"
+```
+
+For the latest development code, clone the repository and run the commands below
+from its root:
 
 ```bash
 git clone https://github.com/LazzyXP/Multimodal-Recommender-System.git
