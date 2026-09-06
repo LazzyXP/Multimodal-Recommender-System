@@ -1362,6 +1362,8 @@ class MultiModalRecommender:
         target.mkdir(parents=True, exist_ok=True)
         original_history_index = self.history_index
         bundled_history_index: str | None = None
+        artifact_path = target / "recommender.pkl"
+        temporary_artifact = target / f".recommender.pkl.{uuid.uuid4().hex}.tmp"
         try:
             if include_history_index and self.history_index:
                 source_index = Path(self.history_index)
@@ -1370,16 +1372,18 @@ class MultiModalRecommender:
                 bundled_history_index = f"history-index-{uuid.uuid4().hex[:12]}"
                 shutil.copytree(source_index, target / bundled_history_index)
                 self.history_index = bundled_history_index
-            with (target / "recommender.pkl").open("wb") as handle:
+            with temporary_artifact.open("wb") as handle:
                 artifact = copy.copy(self)
                 if best_only and self.model_best != "RankFusion":
                     artifact.models = {self.model_best: self.models[self.model_best]}
                 pickle.dump(artifact, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            temporary_artifact.replace(artifact_path)
         finally:
             self.history_index = original_history_index
+            temporary_artifact.unlink(missing_ok=True)
         metadata = {
             "format_version": 2,
-            "artifact_sha256": _sha256_file(target / "recommender.pkl"),
+            "artifact_sha256": _sha256_file(artifact_path),
             "model_best": self.model_best,
             "eval_metric": self.eval_metric,
             "package_version": self._package_version(),
@@ -1393,9 +1397,12 @@ class MultiModalRecommender:
                 original_history_index if self.is_streaming and not bundled_history_index else None
             ),
         }
-        (target / "metadata.json").write_text(
+        metadata_path = target / "metadata.json"
+        temporary_metadata = target / f".metadata.json.{uuid.uuid4().hex}.tmp"
+        temporary_metadata.write_text(
             json.dumps(metadata, indent=2, sort_keys=True, default=str), encoding="utf-8"
         )
+        temporary_metadata.replace(metadata_path)
         return target
 
     @classmethod
