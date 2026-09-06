@@ -10,7 +10,7 @@
 面向交互数据与物品多模态特征的 AutoML 推荐工具，工作流受 AutoGluon 启发。
 支持从简单基线开始，再按数据条件加入内容模型和可选 PyTorch 图模型。
 
-[快速开始](#快速开始) · [使用指南](docs/usage.md) · [模型目录](docs/model-catalog.md) · [安装说明](docs/installation.md) · [能力审计](docs/AUDIT.md)
+[快速开始](#快速开始) · [使用指南](docs/usage.md) · [模型目录](docs/model-catalog.md) · [安装说明](docs/installation.md) · [基准测试](#基准测试)
 
 一个从基线到多模态推荐的完整工作流：用统一接口准备数据、训练候选模型、自动选模、融合排名，并把最佳模型保存后用于批量推荐。
 
@@ -122,7 +122,7 @@ uv run ruff check .
 uv build
 ```
 
-`benchmarks/` 是仓库中的可复现实验工具，不需要安装到运行时包中。默认生成合成数据，也可对真实交互表运行：
+`benchmarks/` 提供可复现实验和性能对比，默认生成合成数据，也可对真实交互表运行：
 
 ```bash
 python benchmarks/benchmark.py --input data/interactions.parquet --seeds 7,8,9
