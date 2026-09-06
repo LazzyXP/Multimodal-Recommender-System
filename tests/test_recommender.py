@@ -103,6 +103,14 @@ def test_load_recovers_previous_complete_generation(
     assert restored.models.keys() == fitted.models.keys()
 
 
+def test_save_reclaims_stale_writer_lock(fitted: MultiModalRecommender, tmp_path) -> None:
+    model_path = tmp_path / "model"
+    model_path.mkdir()
+    (model_path / ".save.lock").write_text("999999999")
+    fitted.save(model_path)
+    assert not (model_path / ".save.lock").exists()
+
+
 def test_validates_declared_modalities(interactions: pd.DataFrame) -> None:
     items = pd.DataFrame({"item_id": ["a", "b", "c", "d", "e"], "title": ["a"] * 5})
     predictor = MultiModalRecommender()

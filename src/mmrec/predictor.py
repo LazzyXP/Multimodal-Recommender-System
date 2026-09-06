@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import os
 import pickle
 import shutil
 import uuid
@@ -12,7 +13,7 @@ import warnings
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict
 from pathlib import Path
-from time import perf_counter
+from time import perf_counter, sleep
 from typing import Any
 
 import numpy as np
@@ -1352,6 +1353,40 @@ class MultiModalRecommender:
         return self.fit_result
 
     def save(
+        self,
+        path: str | Path,
+        include_history_index: bool = False,
+        best_only: bool = False,
+    ) -> Path:
+        """Persist an artifact while serializing concurrent writers per directory."""
+        target = Path(path)
+        target.mkdir(parents=True, exist_ok=True)
+        lock = target / ".save.lock"
+        deadline = perf_counter() + 30.0
+        while True:
+            try:
+                descriptor = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                with os.fdopen(descriptor, "w", encoding="ascii") as handle:
+                    handle.write(str(os.getpid()))
+                break
+            except FileExistsError:
+                try:
+                    owner = int(lock.read_text(encoding="ascii"))
+                    os.kill(owner, 0)
+                except (OSError, ValueError):
+                    lock.unlink(missing_ok=True)
+                    continue
+                if perf_counter() >= deadline:
+                    raise TimeoutError(
+                        f"Timed out waiting to save model into {target}"
+                    ) from None
+                sleep(0.05)
+        try:
+            return self._save_unlocked(path, include_history_index, best_only)
+        finally:
+            lock.unlink(missing_ok=True)
+
+    def _save_unlocked(
         self,
         path: str | Path,
         include_history_index: bool = False,
