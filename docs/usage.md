@@ -167,6 +167,9 @@ recommender.fit(
 `size_bytes`、`status` 与 `early_stopped`；`save()` 写入的 `metadata.json` 现在包含依赖版本、
 交互 schema hash 和逐模型统计，便于复现与审计。
 
+`save()` 默认保留最近 3 个 generation；可通过 `max_generations` 调整保留数。generation
+包含模型和打包的历史索引，旧 generation 会在写锁内清理。
+
 安装 `[faiss]` extra 后，`MultiModalItemKNN` 可设置 `use_ann=True` 使用 FAISS
 `IndexFlatIP` 精确内积检索。该参数名沿用早期接口，当前并未实现 HNSW/IVF 近似索引；
 未安装 FAISS 时回退到 NumPy 内积。
@@ -240,4 +243,3 @@ recommender.save("artifacts/model")
 
 用户表的用户 ID 必须唯一，物品表的物品 ID 必须唯一。`modalities` 中声明的每一列必须存在于
 对应特征表。
-
