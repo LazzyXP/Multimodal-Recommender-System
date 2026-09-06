@@ -86,6 +86,13 @@ def test_validates_declared_modalities(interactions: pd.DataFrame) -> None:
     }
 
 
+def test_rejects_non_numeric_labels(interactions: pd.DataFrame) -> None:
+    invalid = interactions.assign(label="positive")
+    predictor = MultiModalRecommender(label="label")
+    with pytest.raises(ValueError, match="must contain numeric values"):
+        predictor.fit(invalid, models="Popularity")
+
+
 def test_duplicate_dataframe_index_does_not_corrupt_holdout(interactions: pd.DataFrame) -> None:
     interactions.index = [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5]
     predictor = MultiModalRecommender(eval_metrics=["recall@3"])

@@ -49,7 +49,8 @@ def prepare_dataset(
 ) -> DatasetBundle:
     cache = ParquetCache(cache_dir)
     interaction_frame, interaction_source = load_table(interactions, "interactions", cache)
-    assert interaction_frame is not None
+    if interaction_frame is None:  # Defensive guard for callers passing a null input.
+        raise ValueError("interactions is required.")
     user_frame, user_source = load_table(users, "users", cache)
     item_frame, item_source = load_table(items, "items", cache)
 
@@ -66,7 +67,10 @@ def prepare_dataset(
             interaction_frame[columns.timestamp], errors="raise", utc=True
         )
     if columns.label:
-        interaction_frame = interaction_frame[interaction_frame[columns.label] > 0].copy()
+        labels = pd.to_numeric(interaction_frame[columns.label], errors="coerce")
+        if labels.isna().any():
+            raise ValueError(f"interactions.{columns.label} must contain numeric values.")
+        interaction_frame = interaction_frame[labels > 0].copy()
         if interaction_frame.empty:
             raise ValueError("No positive interactions remain after applying the label column.")
 
@@ -173,12 +177,17 @@ def _validate_modalities(
                 f"Modalities were declared for {entity}, but no {entity}s table was given."
             )
         for modality, configured_columns in config.items():
+            if modality not in {"categorical", "numerical", "text", "embedding", "image"}:
+                raise ValueError(
+                    f"Unsupported {entity}.{modality} modality. "
+                    "Choose categorical, numerical, text, embedding, or image."
+                )
             names = (
                 [configured_columns] if isinstance(configured_columns, str) else configured_columns
             )
-            if not isinstance(names, list):
+            if not isinstance(names, (list, tuple)):
                 raise TypeError(f"{entity}.{modality} modality columns must be a string or list.")
-            _require_columns(frame, names, f"{entity}s")  # type: ignore[arg-type]
+            _require_columns(frame, list(names), f"{entity}s")  # type: ignore[arg-type]
 
 
 def global_temporal_split(
