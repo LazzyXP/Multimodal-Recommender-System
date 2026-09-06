@@ -46,7 +46,7 @@
 
 ## 二、关键验证证据
 
-- **测试**：48 个用例全部通过（模型选择、流式、存储、torch 模型、指标数值正确性、
+- **测试**：72 个用例全部通过（模型选择、流式、存储、torch 模型、指标数值正确性、
   TPE、集成、HPO、checkpoint、manifest）。`ruff` 全绿。
 - **模型保真度**：8 个 torch 模型两两 item embedding **全部不同（28/28 对）**，证明
   不是「共享基类 + 开关」的别名，而是独立的图构建/传播/损失。
@@ -65,7 +65,8 @@
 2. **meta-learner 堆叠**：非负逻辑回归在 validation 上监督学习 RRF 权重；最终指标使用独立
    test 切分，但仍不是多折 OOF stacking。
 3. **简化 TPE HPO**：`hpo.TpeSearch` 无外部依赖的 TPE 式加权采样 + successive-halving。
-4. **FAISS ANN**：`[faiss]` extra + `MultiModalItemKNN(use_ann=True)`，缺依赖自动回退精确内积。
+4. **FAISS 精确索引**：`[faiss]` extra + `MultiModalItemKNN(use_ann=True)` 使用 `IndexFlatIP`，
+   缺依赖时自动回退 NumPy 精确内积；HNSW/IVF 等近似索引仍未实现。
 5. **修复默认学习率导致的图模型欠拟合**：`lr 1e-3 → 1e-2`、`epochs 20 → 50`（修复前 BPR
    损失停在 log2≈0.693 附近不降，修复后 0.684 → 0.287，已验证梯度正常流动）。
 
