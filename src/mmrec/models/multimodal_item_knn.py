@@ -196,7 +196,7 @@ class MultiModalItemKNNModel(BaseRecommendationModel):
     def score_all_users(
         self, users: list[Any], histories: dict[Any, set[Any]]
     ) -> np.ndarray | None:
-        """Batched content scoring: one profile matrix, one BLAS matmul."""
+        """Batch profiles through FAISS when enabled, otherwise use one BLAS matmul."""
         profiles = []
         for user_id in users:
             history_vectors = [
