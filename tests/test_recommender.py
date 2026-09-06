@@ -76,18 +76,24 @@ def test_save_and_load(fitted: MultiModalRecommender, tmp_path) -> None:
 
 def test_load_rejects_tampered_artifact(fitted: MultiModalRecommender, tmp_path) -> None:
     model_path = fitted.save(tmp_path / "model")
-    artifact = model_path / "recommender.pkl"
+    generation = model_path / (model_path / ".CURRENT").read_text()
+    artifact = model_path / generation / "recommender.pkl"
     artifact.write_bytes(artifact.read_bytes() + b"tampered")
+    root_artifact = model_path / "recommender.pkl"
+    root_artifact.write_bytes(root_artifact.read_bytes() + b"tampered")
     with pytest.raises(ValueError, match="integrity check"):
         MultiModalRecommender.load(model_path)
 
 
 def test_load_rejects_mismatched_metadata(fitted: MultiModalRecommender, tmp_path) -> None:
     model_path = fitted.save(tmp_path / "model")
-    metadata_path = model_path / "metadata.json"
+    generation = model_path / (model_path / ".CURRENT").read_text()
+    metadata_path = generation / "metadata.json"
     metadata = json.loads(metadata_path.read_text())
     metadata["models"] = ["NotARealModel"]
     metadata_path.write_text(json.dumps(metadata))
+    root_metadata = model_path / "metadata.json"
+    root_metadata.write_text(json.dumps(metadata))
     with pytest.raises(ValueError, match="model list"):
         MultiModalRecommender.load(model_path)
 

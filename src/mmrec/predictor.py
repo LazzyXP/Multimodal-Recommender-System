@@ -1382,9 +1382,27 @@ class MultiModalRecommender:
                     ) from None
                 sleep(0.05)
         try:
-            return self._save_unlocked(path, include_history_index, best_only)
+            result = self._save_unlocked(path, include_history_index, best_only)
+            self._publish_generation(result)
+            return result
         finally:
             lock.unlink(missing_ok=True)
+
+    @staticmethod
+    def _publish_generation(target: Path) -> None:
+        """Publish a complete artifact directory by atomically swapping a pointer."""
+        generation_name = f".generation-{uuid.uuid4().hex}"
+        generation = target / generation_name
+        generation.mkdir()
+        shutil.copy2(target / "recommender.pkl", generation / "recommender.pkl")
+        shutil.copy2(target / "metadata.json", generation / "metadata.json")
+        for history_index in target.glob("history-index-*"):
+            if history_index.is_dir():
+                shutil.copytree(history_index, generation / history_index.name)
+        pointer = target / ".CURRENT"
+        temporary = target / f".CURRENT.{uuid.uuid4().hex}.tmp"
+        temporary.write_text(generation_name, encoding="utf-8")
+        temporary.replace(pointer)
 
     def _save_unlocked(
         self,
@@ -1448,7 +1466,14 @@ class MultiModalRecommender:
     @classmethod
     def load(cls, path: str | Path) -> MultiModalRecommender:
         root = Path(path)
-        candidates = [(root / "recommender.pkl", root / "metadata.json")]
+        candidates: list[tuple[Path, Path]] = []
+        pointer = root / ".CURRENT"
+        if pointer.exists():
+            generation_name = pointer.read_text(encoding="utf-8").strip()
+            generation = (root / generation_name).resolve()
+            if generation.parent == root.resolve() and generation.name.startswith(".generation-"):
+                candidates.append((generation / "recommender.pkl", generation / "metadata.json"))
+        candidates.append((root / "recommender.pkl", root / "metadata.json"))
         previous = (root / ".recommender.pkl.previous", root / ".metadata.json.previous")
         if all(candidate.exists() for candidate in previous):
             candidates.append(previous)
