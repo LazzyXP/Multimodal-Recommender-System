@@ -1,6 +1,6 @@
 [project]
 name = "multimodal-recommender"
-version = "0.1.1"
+version = "0.1.2"
 description = "AutoML-style multimodal recommendation toolkit"
 readme = "README.md"
 requires-python = ">=3.11"

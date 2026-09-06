@@ -25,7 +25,7 @@ Official instructions: https://docs.pypi.org/trusted-publishers/creating-a-proje
 
 ## Build, verify, then publish
 
-1. Confirm `pyproject.toml` has the intended new version (currently the development version is `0.1.1`).
+1. Confirm `pyproject.toml` has the intended new version (currently the development version is `0.1.2`).
 2. Wait for CI and **Package and publish** to pass on the exact commit being released.
    The packaging workflow builds both distributions, validates metadata with Twine, installs the
    source distribution, and tests the wheel on Linux/macOS/Windows with Python 3.11 and 3.12.
