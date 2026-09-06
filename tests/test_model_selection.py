@@ -56,11 +56,15 @@ def test_multimodal_ann_topk_must_be_positive() -> None:
 
 def test_multimodal_ann_backend_validation() -> None:
     with pytest.raises(ValueError, match="ann_backend"):
-        MultiModalItemKNNModel(ColumnConfig(), use_ann=True, ann_backend="ivf")
+        MultiModalItemKNNModel(ColumnConfig(), use_ann=True, ann_backend="pq")
     model = MultiModalItemKNNModel(
         ColumnConfig(), use_ann=True, ann_backend="hnsw", ann_hnsw_m=16, ann_ef_search=32
     )
     assert (model.ann_backend, model.ann_hnsw_m, model.ann_ef_search) == ("hnsw", 16, 32)
+    ivf = MultiModalItemKNNModel(
+        ColumnConfig(), use_ann=True, ann_backend="ivf", ann_nlist=4, ann_nprobe=2
+    )
+    assert (ivf.ann_nlist, ivf.ann_nprobe) == (4, 2)
 
 
 def test_model_catalog_exposes_families_and_references() -> None:

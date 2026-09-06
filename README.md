@@ -110,7 +110,7 @@ print(recommender.recommend(users=["u1"], k=2).data)
 - **融合**：权重学习与融合选择共享一次验证集，尚未实现多折 OOF/bagging。
 - **规模**：流式交互入口会采样训练部分模型；物品特征仍整体驻留内存，不能据此宣称全量大规模训练。
 - **冷启动**：`MultiModalItemKNN` 可用与物品同维度的用户 embedding 为无历史用户生成内容推荐；其他模型仍主要依赖交互历史。
-- **检索**：FAISS 默认使用 `IndexFlatIP` 精确索引，也可通过 `ann_backend="hnsw"` 启用 HNSW 近似检索；未安装 FAISS 时自动回退 NumPy。
+- **检索**：FAISS 默认使用 `IndexFlatIP` 精确索引，也可通过 `ann_backend="hnsw"` 或 `"ivf"` 启用近似检索；未安装 FAISS 时自动回退 NumPy。
 - **模型文件**：仅加载可信来源的 pickle。SHA-256 用于发现意外损坏，不提供来源认证；保存使用 generation 目录和原子 `.CURRENT` 指针，并保留旧版本回退。长期部署还应配置 generation 清理策略。
 
 详细参数、时间预算、切分方式、大数据输出和完整配置见 [使用指南](docs/usage.md)。

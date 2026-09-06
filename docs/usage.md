@@ -172,8 +172,8 @@ recommender.fit(
 
 安装 `[faiss]` extra 后，`MultiModalItemKNN` 可设置 `use_ann=True` 使用 FAISS。
 默认 `ann_backend="flat"` 是 `IndexFlatIP` 精确内积检索；大目录可以设置
-`ann_backend="hnsw"`，并调节 `ann_hnsw_m` 与 `ann_ef_search`。未安装 FAISS 时两种配置都会
-回退到 NumPy 内积。
+`ann_backend="hnsw"` 或 `"ivf"`，分别调节 `ann_hnsw_m`/`ann_ef_search` 或
+`ann_nlist`/`ann_nprobe`。未安装 FAISS 时三种配置都会回退到 NumPy 内积。
 
 ## 完整多模态配置示例
 

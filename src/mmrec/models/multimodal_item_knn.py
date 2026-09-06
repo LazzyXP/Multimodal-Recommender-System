@@ -3,7 +3,8 @@
 Scoring defaults to an exact vectorized inner product (BLAS), which is optimal
 for exact recall. When ``use_ann=True`` and the optional ``faiss-cpu`` package
 is installed, ``ann_backend="flat"`` uses exact IndexFlatIP and
-``ann_backend="hnsw"`` enables approximate HNSW retrieval.
+``ann_backend="hnsw"`` enables approximate HNSW retrieval and
+``ann_backend="ivf"`` enables trained IVF retrieval.
 """
 
 from __future__ import annotations
@@ -30,21 +31,29 @@ class MultiModalItemKNNModel(BaseRecommendationModel):
         ann_backend: str = "flat",
         ann_hnsw_m: int = 32,
         ann_ef_search: int = 64,
+        ann_nlist: int = 64,
+        ann_nprobe: int = 8,
     ) -> None:
         super().__init__(columns)
         if ann_topk <= 0:
             raise ValueError("ann_topk must be positive.")
-        if ann_backend not in {"flat", "hnsw"}:
-            raise ValueError("ann_backend must be 'flat' or 'hnsw'.")
+        if ann_backend not in {"flat", "hnsw", "ivf"}:
+            raise ValueError("ann_backend must be 'flat', 'hnsw', or 'ivf'.")
         if ann_hnsw_m <= 0:
             raise ValueError("ann_hnsw_m must be positive.")
         if ann_ef_search <= 0:
             raise ValueError("ann_ef_search must be positive.")
+        if ann_nlist <= 0:
+            raise ValueError("ann_nlist must be positive.")
+        if ann_nprobe <= 0:
+            raise ValueError("ann_nprobe must be positive.")
         self.use_ann = use_ann
         self.ann_topk = ann_topk
         self.ann_backend = ann_backend
         self.ann_hnsw_m = ann_hnsw_m
         self.ann_ef_search = ann_ef_search
+        self.ann_nlist = ann_nlist
+        self.ann_nprobe = ann_nprobe
         self._ann_index: Any = None
         self.user_vectors: dict[Any, np.ndarray] = {}
 
@@ -93,14 +102,23 @@ class MultiModalItemKNNModel(BaseRecommendationModel):
         try:
             import faiss  # type: ignore[import-not-found]
 
+            vectors = self.feature_matrix.astype(np.float32)
             if self.ann_backend == "hnsw":
                 index = faiss.IndexHNSWFlat(
                     self.feature_matrix.shape[1], self.ann_hnsw_m, faiss.METRIC_INNER_PRODUCT
                 )
                 index.hnsw.efSearch = max(self.ann_ef_search, self.ann_topk)
+            elif self.ann_backend == "ivf":
+                nlist = min(self.ann_nlist, len(vectors))
+                quantizer = faiss.IndexFlatIP(self.feature_matrix.shape[1])
+                index = faiss.IndexIVFFlat(
+                    quantizer, self.feature_matrix.shape[1], nlist, faiss.METRIC_INNER_PRODUCT
+                )
+                index.train(vectors)
+                index.nprobe = min(self.ann_nprobe, nlist)
             else:
                 index = faiss.IndexFlatIP(self.feature_matrix.shape[1])
-            index.add(self.feature_matrix.astype(np.float32))
+            index.add(vectors)
             return index
         except ImportError:
             warnings.warn(
